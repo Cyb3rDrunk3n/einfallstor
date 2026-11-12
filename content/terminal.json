@@ -1,0 +1,299 @@
+{
+  "host": "uebungsbox",
+  "user": "lehrling",
+  "dirs": {
+    "/root": { "mode": "rwx------", "owner": "root" },
+    "/tmp": { "mode": "rwxrwxrwt", "owner": "root" },
+    "/home/lehrling/downloads": {}
+  },
+  "files": {
+    "/home/lehrling/willkommen.txt": {
+      "lines": [
+        "Willkommen auf der Übungsbox!",
+        "",
+        "Dies ist eine Simulation. Du kannst nichts kaputt machen,",
+        "und kein Befehl verlässt deinen Browser.",
+        "",
+        "Tippe help, um alle Befehle zu sehen.",
+        "",
+        "Lösungswort der ersten Mission: startklar"
+      ]
+    },
+    "/home/lehrling/.notiz": {
+      "lines": [
+        "Versteckte Dateien beginnen mit einem Punkt.",
+        "Lösungswort: punktdatei"
+      ]
+    },
+    "/home/lehrling/.bashrc": {
+      "lines": [
+        "# Einstellungen der Shell",
+        "alias ll='ls -la'",
+        "export EDITOR=nano"
+      ]
+    },
+    "/home/lehrling/laborbuch.txt": {
+      "lines": [
+        "03.11. Übungsbox eingerichtet.",
+        "03.11. Erste Befehle ausprobiert: pwd, ls, cd, cat.",
+        "04.11. Offen: Wie liest man die Rechte in ls -l?"
+      ]
+    },
+    "/home/lehrling/projekte/lernplan.txt": {
+      "lines": [
+        "Woche 1: Shell-Grundlagen",
+        "Woche 2: Rechte und Benutzer",
+        "Woche 3: Suchen und Filtern"
+      ]
+    },
+    "/home/lehrling/projekte/kunde-nordwind/auftrag/scope.txt": {
+      "lines": [
+        "Auftrag: Sicherheitsprüfung Nordwind Logistik GmbH (Übungsszenario)",
+        "Zeitraum: 10.11. bis 14.11., werktags 18:00 bis 06:00 Uhr",
+        "Freigegebener Bereich: 192.168.56.0/24",
+        "Ausgenommen: 192.168.56.1 (Router des Anbieters)",
+        "Nicht erlaubt: Angriffe auf die Verfügbarkeit, Täuschung von Mitarbeitern",
+        "Bei Störungen: Test sofort stoppen und die IT-Leitung anrufen"
+      ]
+    },
+    "/home/lehrling/projekte/kunde-nordwind/auftrag/ansprechpartner.txt": {
+      "lines": [
+        "IT-Leitung: Frau Yilmaz, Durchwahl -14",
+        "Vertretung: Herr Brandt, Durchwahl -22"
+      ]
+    },
+    "/home/lehrling/projekte/kunde-nordwind/notizen/todo.txt": {
+      "lines": [
+        "- Scope mit der IT-Leitung abgleichen",
+        "- Zeitfenster im Kalender eintragen",
+        "- Laborbuch für den Auftrag anlegen"
+      ]
+    },
+    "/srv/lager/aktuell/lieferungen.txt": {
+      "lines": [
+        "KW45: 12 Paletten, Tor 3",
+        "KW46: 9 Paletten, Tor 1"
+      ]
+    },
+    "/srv/lager/archiv/2023/bericht.txt": {
+      "lines": [
+        "Jahresbericht Lager 2023",
+        "Keine besonderen Vorkommnisse."
+      ]
+    },
+    "/srv/lager/archiv/2024/notiz.txt": {
+      "lines": [
+        "Inventarliste liegt als CSV daneben."
+      ]
+    },
+    "/srv/lager/archiv/2024/inventar.csv": {
+      "lines": [
+        "name;typ;standort",
+        "web01;server;rechenzentrum",
+        "db01;server;rechenzentrum",
+        "pc-empfang;arbeitsplatz;erdgeschoss",
+        "pc-buchhaltung;arbeitsplatz;obergeschoss-1",
+        "drucker-og2;drucker;obergeschoss-2"
+      ]
+    },
+    "/srv/freigabe/aushang.txt": {
+      "mode": "rw-r--r--",
+      "lines": ["Betriebsversammlung am Freitag um 14 Uhr in der Kantine."]
+    },
+    "/srv/freigabe/dienstplan.txt": {
+      "mode": "rw-rw-rw-",
+      "lines": [
+        "Montag: Frühschicht Team A",
+        "Dienstag: Frühschicht Team B",
+        "Hinweis: Diese Datei darf jeder ändern. Das ist ein Befund."
+      ]
+    },
+    "/srv/freigabe/speiseplan.txt": {
+      "mode": "rw-r--r--",
+      "lines": ["Montag: Linseneintopf", "Dienstag: Gemüsepfanne"]
+    },
+    "/srv/freigabe/protokoll.txt": {
+      "mode": "rw-r-----",
+      "lines": ["Internes Protokoll der Geschäftsleitung."]
+    },
+    "/var/log/auth.log": {
+      "lines": [
+        "Nov 03 02:14:07 uebungsbox sshd[1042]: Failed password for invalid user admin from 203.0.113.44 port 51122 ssh2",
+        "Nov 03 02:14:09 uebungsbox sshd[1042]: Failed password for root from 203.0.113.44 port 51124 ssh2",
+        "Nov 03 02:14:12 uebungsbox sshd[1042]: Failed password for root from 203.0.113.44 port 51130 ssh2",
+        "Nov 03 02:14:15 uebungsbox sshd[1042]: Failed password for invalid user test from 203.0.113.44 port 51137 ssh2",
+        "Nov 03 02:14:19 uebungsbox sshd[1042]: Failed password for invalid user oracle from 203.0.113.44 port 51141 ssh2",
+        "Nov 03 06:30:01 uebungsbox CRON[1210]: pam_unix(cron:session): session opened for user root",
+        "Nov 03 07:58:31 uebungsbox sshd[1377]: Accepted password for lehrling from 192.168.56.10 port 50212 ssh2",
+        "Nov 03 08:02:44 uebungsbox sudo: lehrling : command not allowed ; COMMAND=/usr/bin/cat /etc/shadow",
+        "Nov 03 09:12:45 uebungsbox sshd[1503]: Accepted publickey for backup from 192.168.56.23 port 40022 ssh2",
+        "Nov 03 11:47:02 uebungsbox sshd[1688]: Failed password for lehrling from 192.168.56.10 port 50377 ssh2",
+        "Nov 03 11:47:10 uebungsbox sshd[1688]: Accepted password for lehrling from 192.168.56.10 port 50377 ssh2",
+        "Nov 03 23:05:51 uebungsbox sshd[2104]: Failed password for root from 198.51.100.7 port 44310 ssh2",
+        "Nov 03 23:05:54 uebungsbox sshd[2104]: Failed password for root from 198.51.100.7 port 44318 ssh2"
+      ]
+    },
+    "/var/log/syslog": {
+      "lines": [
+        "Nov 03 06:25:01 uebungsbox systemd[1]: Starting Daily apt download activities...",
+        "Nov 03 06:25:03 uebungsbox systemd[1]: Finished Daily apt download activities.",
+        "Nov 03 09:00:00 uebungsbox nginx[812]: signal process started"
+      ]
+    },
+    "/etc/hostname": { "lines": ["uebungsbox"] },
+    "/etc/hosts": {
+      "lines": [
+        "127.0.0.1   localhost",
+        "127.0.1.1   uebungsbox",
+        "192.168.56.10   uebungsbox.labor.test"
+      ]
+    },
+    "/etc/os-release": {
+      "lines": [
+        "NAME=Uebungs-Linux",
+        "VERSION=1.0 (Simulation)",
+        "ID=uebung"
+      ]
+    },
+    "/etc/passwd": {
+      "lines": [
+        "root:x:0:0:root:/root:/bin/bash",
+        "www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin",
+        "backup:x:34:34:backup:/var/backups:/usr/sbin/nologin",
+        "lehrling:x:1000:1000:Lehrling:/home/lehrling:/bin/bash"
+      ]
+    },
+    "/etc/shadow": {
+      "mode": "rw-r-----",
+      "lines": ["Nur root darf diese Datei lesen."]
+    },
+    "/etc/ssh/sshd_config": {
+      "lines": [
+        "# Einstellungen des SSH-Dienstes",
+        "Port 22",
+        "PermitRootLogin no",
+        "PasswordAuthentication yes",
+        "MaxAuthTries 3"
+      ]
+    },
+    "/etc/nginx/nginx.conf": {
+      "lines": [
+        "# Webserver der Übungsbox",
+        "server {",
+        "    listen 80;",
+        "    server_name uebungsbox.labor.test;",
+        "    root /var/www/html;",
+        "}"
+      ]
+    },
+    "/etc/nginx/nginx.conf.bak": {
+      "lines": [
+        "# Alte Fassung, vor dem Umbau gesichert und dann vergessen.",
+        "# Vergessene Sicherungskopien gehören zu den Dingen, die eine Prüfung aufdeckt.",
+        "# Lösungswort: aufgeraeumt",
+        "server {",
+        "    listen 8080;",
+        "    root /var/www/alt;",
+        "}"
+      ]
+    }
+  },
+  "missions": [
+    {
+      "id": "orientierung",
+      "title": "Orientierung",
+      "task": "Finde heraus, in welchem Verzeichnis du bist, sieh dich um und lies die Datei `willkommen.txt`. Darin steht das Lösungswort.",
+      "hints": [
+        "`pwd` zeigt das aktuelle Verzeichnis, `ls` seinen Inhalt.",
+        "`cat willkommen.txt` gibt die Datei aus."
+      ],
+      "xp": 25,
+      "lesson": "linux/die-shell-erste-schritte",
+      "solution": "startklar"
+    },
+    {
+      "id": "versteckt",
+      "title": "Versteckte Datei",
+      "task": "In deinem Home-Verzeichnis liegt eine versteckte Datei mit einer Notiz. Finde sie und lies das Lösungswort.",
+      "hints": [
+        "Versteckte Dateien beginnen mit einem Punkt. `ls -a` zeigt sie an.",
+        "Lies die Datei mit `cat` und dem vollständigen Namen samt Punkt."
+      ],
+      "xp": 25,
+      "lesson": "linux/die-shell-erste-schritte",
+      "solution": "punktdatei"
+    },
+    {
+      "id": "scope",
+      "title": "Den Scope lesen",
+      "task": "Im Verzeichnis `projekte` liegt der Auftrag eines Übungskunden. Welcher Adressbereich ist laut `scope.txt` für den Test freigegeben? Gib ihn in CIDR-Schreibweise an.",
+      "hints": [
+        "Wechsle mit `cd projekte` in das Verzeichnis und sieh dich mit `ls` um.",
+        "Die Datei liegt zwei Ebenen tiefer im Ordner `auftrag`."
+      ],
+      "xp": 30,
+      "lesson": "linux/die-shell-erste-schritte",
+      "solution": "192.168.56.0/24"
+    },
+    {
+      "id": "rechte",
+      "title": "Rechte lesen",
+      "task": "Im Verzeichnis `/srv/freigabe` liegt eine Datei, die jeder Benutzer verändern darf. Wie heißt sie?",
+      "hints": [
+        "`ls -l /srv/freigabe` zeigt die Rechte aller Dateien.",
+        "Achte auf die letzten drei Zeichen der Rechtezeile. Sie gelten für alle anderen Benutzer."
+      ],
+      "xp": 35,
+      "lesson": "linux/benutzer-rechte-und-sudo",
+      "solution": "dienstplan.txt"
+    },
+    {
+      "id": "inventar",
+      "title": "Suchen mit find",
+      "task": "Irgendwo unterhalb von `/srv` liegt eine Datei namens `inventar.csv`. Wie heißt das Gerät in ihrer letzten Zeile?",
+      "hints": [
+        "`find /srv -name inventar.csv` zeigt, wo die Datei liegt.",
+        "`tail -n 1 DATEI` gibt nur die letzte Zeile aus. Gesucht ist der Wert vor dem ersten Semikolon."
+      ],
+      "xp": 35,
+      "lesson": "linux/suchen-filtern-verketten",
+      "solution": "drucker-og2"
+    },
+    {
+      "id": "anmeldung",
+      "title": "Protokoll auswerten",
+      "task": "Im Protokoll `/var/log/auth.log` steht, von welcher IP-Adresse sich das Konto `backup` angemeldet hat. Wie lautet die Adresse?",
+      "hints": [
+        "`grep backup /var/log/auth.log` zeigt alle Zeilen, in denen das Wort vorkommt.",
+        "Die Adresse steht hinter dem Wort from."
+      ],
+      "xp": 35,
+      "lesson": "linux/suchen-filtern-verketten",
+      "solution": "192.168.56.23"
+    },
+    {
+      "id": "fehlversuche",
+      "title": "Zählen mit der Pipe",
+      "task": "Wie viele fehlgeschlagene Anmeldungen (Zeilen mit `Failed password`) verzeichnet `/var/log/auth.log`?",
+      "hints": [
+        "Suche mit `grep \"Failed password\" /var/log/auth.log` nach den passenden Zeilen.",
+        "Hänge `| wc -l` an, um die Zeilen zu zählen. `grep -c` liefert dasselbe Ergebnis."
+      ],
+      "xp": 40,
+      "lesson": "linux/suchen-filtern-verketten",
+      "solution": "8"
+    },
+    {
+      "id": "sicherungskopie",
+      "title": "Vergessene Sicherungskopie",
+      "task": "Unter `/etc` hat jemand die Sicherungskopie einer Konfigurationsdatei vergessen. Ihr Name endet auf `.bak`, und in einer Kommentarzeile steht das Lösungswort.",
+      "hints": [
+        "`find /etc -name \"*.bak\"` findet die Datei.",
+        "Mit `grep -i lösungswort DATEI` springst du direkt zur richtigen Zeile."
+      ],
+      "xp": 45,
+      "lesson": "linux/suchen-filtern-verketten",
+      "solution": "aufgeraeumt"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+# Laufzeitdaten: SQLite-Datenbank mit Konten und Fortschritt
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Werkzeuge
+.claude/
+.vscode/
+.idea/
