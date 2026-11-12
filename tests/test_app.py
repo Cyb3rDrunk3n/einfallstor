@@ -62,10 +62,12 @@ class Client:
 
 
 class ServerCase(unittest.TestCase):
+    behind_proxy = False
+
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp(prefix="einfallstor-test-")
-        cls.server = server.create_server("127.0.0.1", 0, str(Path(cls.tmp) / "test.db"))
+        cls.server = server.create_server("127.0.0.1", 0, str(Path(cls.tmp) / "test.db"), cls.behind_proxy)
         cls.port = cls.server.server_address[1]
         cls.app = cls.server.app
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
@@ -386,6 +388,32 @@ class RateLimitTests(ServerCase):
             for _ in range(limit + 1)
         ]
         self.assertEqual(statuses, [401] * limit + [429])
+        # Ohne Proxy-Modus zählt die echte Verbindung. Ein mitgeschickter Kopf ändert nichts.
+        spoofed = client.post("/api/login", {"username": "niemand", "password": "falsches-passwort"}, {"X-Forwarded-For": "203.0.113.9"})
+        self.assertEqual(spoofed[0].status, 429)
+
+
+class ProxyTests(ServerCase):
+    """Hinter einem Reverse Proxy kommt jede Verbindung von 127.0.0.1. Gezählt wird dann die weitergereichte Adresse."""
+
+    behind_proxy = True
+
+    def attempt(self, forwarded):
+        body = {"username": "niemand", "password": "falsches-passwort"}
+        return self.client().post("/api/login", body, {"X-Forwarded-For": forwarded})[0].status
+
+    def test_limit_counts_per_forwarded_address(self):
+        limit = self.app.limits["login"].limit
+        statuses = [self.attempt("203.0.113.5") for _ in range(limit + 1)]
+        self.assertEqual(statuses, [401] * limit + [429])
+        self.assertEqual(self.attempt("203.0.113.6"), 401)  # andere Adresse, eigenes Kontingent
+
+    def test_client_cannot_pick_its_own_address(self):
+        limit = self.app.limits["login"].limit
+        for _ in range(limit):
+            self.attempt("198.51.100.20")
+        # Der Proxy hängt die echte Adresse hinten an. Vorangestellte Werte stammen vom Client.
+        self.assertEqual(self.attempt("10.1.2.3, 198.51.100.20"), 429)
 
 
 class UnitTests(unittest.TestCase):

@@ -61,6 +61,21 @@ class Handler(BaseHTTPRequestHandler):
     sys_version = ""
     timeout = 20
 
+    def _client_ip(self) -> str:
+        """Adresse des Clients, wichtig für die Begrenzung der Anmeldeversuche."""
+        headers = getattr(self, "headers", None)  # fehlt, wenn schon die erste Zeile der Anfrage kaputt war
+        if self.server.behind_proxy and headers is not None:
+            # Der eigene Proxy hängt die Adresse des Clients hinten an X-Forwarded-For an.
+            # Alles davor kann der Client selbst geschickt haben und zählt deshalb nicht.
+            forwarded = headers.get("X-Forwarded-For", "")
+            last = forwarded.rsplit(",", 1)[-1].strip()
+            if last:
+                return last
+        return self.client_address[0]
+
+    def address_string(self) -> str:
+        return self._client_ip()  # damit im Zugriffsprotokoll nicht nur der Proxy steht
+
     # --- Antworten ---
 
     def _send(self, status: int, body: bytes, content_type: str, headers: dict | None = None) -> None:
@@ -196,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
                 request = api.Request(
                     app=app,
                     conn=conn,
-                    ip=self.client_address[0],
+                    ip=self._client_ip(),
                     body=body,
                     params=params,
                     user=user,
@@ -220,10 +235,13 @@ class Server(ThreadingHTTPServer):
     allow_reuse_address = os.name != "nt"
 
 
-def create_server(host: str, port: int, db_path: str) -> Server:
+def create_server(host: str, port: int, db_path: str, behind_proxy: bool = False) -> Server:
     app = api.App(db_path)
     server = Server((host, port), Handler)
     server.app = app
+    # Nur einschalten, wenn wirklich ein eigener Proxy davorsteht. Sonst könnte
+    # jeder Client seine Adresse über X-Forwarded-For frei wählen.
+    server.behind_proxy = behind_proxy
     return server
 
 
@@ -233,6 +251,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "1337")), help="Port, Standard 1337")
     parser.add_argument("--db", default=str(ROOT / "data" / "einfallstor.db"), help="Pfad der SQLite-Datei")
     parser.add_argument("--open", action="store_true", help="Browser nach dem Start öffnen")
+    parser.add_argument(
+        "--behind-proxy",
+        action="store_true",
+        help="Client-Adresse aus X-Forwarded-For lesen (nur hinter einem eigenen Reverse Proxy)",
+    )
     args = parser.parse_args()
 
     for stream in (sys.stdout, sys.stderr):
@@ -241,7 +264,7 @@ def main() -> None:
 
     Path(args.db).parent.mkdir(parents=True, exist_ok=True)
     try:
-        server = create_server(args.host, args.port, args.db)
+        server = create_server(args.host, args.port, args.db, args.behind_proxy)
     except content.ContentError as error:
         sys.exit(f"Fehler in den Kursinhalten: {error}")
     except OSError as error:

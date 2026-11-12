@@ -1,0 +1,20 @@
+# Caddy nimmt die Anfragen aus dem Internet entgegen, besorgt und erneuert das
+# TLS-Zertifikat und reicht alles an Einfallstor auf 127.0.0.1:1337 weiter.
+# einrichten.sh ersetzt EINFALLSTOR_DOMAIN durch deine Adresse.
+
+EINFALLSTOR_DOMAIN {
+	encode zstd gzip
+
+	# Größere Anfragen braucht die Anwendung nicht.
+	request_body {
+		max_size 16KB
+	}
+
+	header {
+		# Browser rufen diese Adresse ein Jahr lang nur noch über HTTPS auf.
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	reverse_proxy 127.0.0.1:1337
+}

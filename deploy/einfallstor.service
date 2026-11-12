@@ -1,0 +1,51 @@
+# systemd-Dienst für Einfallstor.
+# Die Anwendung läuft als eigener Benutzer ohne Rechte und sieht vom System
+# nur, was sie braucht. Schreiben darf sie allein in /var/lib/einfallstor.
+
+[Unit]
+Description=Einfallstor Lernplattform
+After=network.target
+
+[Service]
+User=einfallstor
+Group=einfallstor
+WorkingDirectory=/opt/einfallstor
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/einfallstor/server.py --host 127.0.0.1 --port 1337 --db /var/lib/einfallstor/einfallstor.db --behind-proxy
+Restart=on-failure
+RestartSec=3
+
+# Legt /var/lib/einfallstor an und übergibt es dem Dienstbenutzer.
+StateDirectory=einfallstor
+StateDirectoryMode=0700
+UMask=0077
+
+# Abschottung
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Obergrenzen, damit ein Fehler nicht den ganzen Server belegt
+MemoryMax=300M
+TasksMax=200
+
+[Install]
+WantedBy=multi-user.target

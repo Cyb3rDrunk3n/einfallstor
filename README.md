@@ -42,6 +42,7 @@ Die Seite läuft danach unter http://localhost:1337. Unter Windows genügt ein D
 | `--host` | Adresse, auf der der Server lauscht | 127.0.0.1 |
 | `--db` | Pfad der SQLite-Datei | `data/einfallstor.db` |
 | `--open` | öffnet nach dem Start den Browser | aus |
+| `--behind-proxy` | liest die Adresse des Clients aus `X-Forwarded-For`, nur für den Betrieb hinter einem eigenen Reverse Proxy | aus |
 
 ## Der Kurs
 
@@ -71,6 +72,7 @@ einfallstor/
 │   ├── terminal.json    Dateisystem und Missionen des Übungsterminals
 │   └── glossar.json
 ├── public/              Frontend: index.html, CSS, JavaScript-Module
+├── deploy/              Einrichtungspaket für einen öffentlichen Server
 ├── tests/               Tests für Inhalte und API
 └── start.bat            Starter für Windows
 ```
@@ -123,7 +125,11 @@ Die Plattform setzt um, was der Kurs lehrt. Die Seite „Sicherheitskonzept“ i
 - Anmeldeversuche sind begrenzt, die Fehlermeldung verrät nicht, ob ein Konto existiert.
 - Quizlösungen und Lösungswörter bleiben auf dem Server.
 
-Der eingebaute Server ist für den Betrieb auf dem eigenen Rechner gedacht und lauscht deshalb nur auf 127.0.0.1. Wer die Plattform für andere anbietet, stellt einen Reverse Proxy mit HTTPS davor. Die Begrenzung der Anmeldeversuche zählt pro IP-Adresse und lebt im Arbeitsspeicher. Hinter einem Proxy sieht der Server nur dessen Adresse, dann sollte der Proxy selbst begrenzen.
+Der eingebaute Server ist für den Betrieb auf dem eigenen Rechner gedacht und lauscht deshalb nur auf 127.0.0.1. Wer die Plattform für andere anbietet, stellt einen Reverse Proxy mit HTTPS davor und startet den Server mit `--behind-proxy`, damit die Begrenzung der Anmeldeversuche die Adresse des Besuchers zählt und nicht die des Proxys. Die Begrenzung lebt im Arbeitsspeicher und beginnt nach einem Neustart von vorn.
+
+## Öffentlich betreiben
+
+Im Ordner [deploy](deploy/README.md) liegt ein Einrichtungspaket für einen Debian-Server: Firewall, SSH nur mit Schlüssel, automatische Updates, ein abgeschotteter systemd-Dienst und Caddy als HTTPS-Proxy. Das Paket ist ein Entwurf und auf einem echten Server noch nicht gelaufen.
 
 Eine Sicherheitslücke gefunden? Bitte als Issue melden oder über die Funktion „Report a vulnerability“ des Repositorys.
 
