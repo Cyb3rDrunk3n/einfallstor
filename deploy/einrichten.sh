@@ -121,9 +121,9 @@ systemctl restart systemd-journald
 melde "Einfallstor installieren"
 id einfallstor &>/dev/null || adduser --system --group --no-create-home einfallstor
 if [[ -d "$ZIEL/.git" ]]; then
-    git -C "$ZIEL" pull --ff-only
+    git -C "$ZIEL" pull --ff-only || abbruch "Das Projekt in $ZIEL ließ sich nicht aktualisieren."
 else
-    git clone --depth 1 "$REPO" "$ZIEL"
+    git clone --depth 1 "$REPO" "$ZIEL" || abbruch "Das Projekt ließ sich nicht von $REPO holen."
 fi
 install -m 0644 "$ZIEL/deploy/einfallstor.service" /etc/systemd/system/einfallstor.service
 systemctl daemon-reload
