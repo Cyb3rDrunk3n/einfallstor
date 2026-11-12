@@ -66,7 +66,7 @@ CADDY_VERSION="$(dpkg-query -W -f='${Version}' caddy)"
 apt-cache madison caddy | awk -v version="$CADDY_VERSION" '$3 == version && /cloudsmith/ { found = 1 } END { exit !found }' \
     || abbruch "Caddy $CADDY_VERSION stammt nicht aus dem Archiv des Herstellers."
 
-# --- 2. Firewall: eingehend nur SSH, HTTP und HTTPS ---------------------------
+# --- 2. Firewall: eingehend nur SSH, HTTP und HTTPS; unnötigen Dienst abschalten
 
 melde "Firewall einrichten"
 SSH_PORT="$(sshd -T 2>/dev/null | awk '$1 == "port" { print $2; exit }')"
@@ -78,6 +78,18 @@ ufw allow 80/tcp comment 'HTTP, leitet auf HTTPS um'
 ufw allow 443/tcp comment 'HTTPS'
 ufw allow 443/udp comment 'HTTPS ueber HTTP/3'
 ufw --force enable
+
+# systemd-resolved lauscht sonst für die Namensauflösung im lokalen Netz (LLMNR)
+# auf Port 5355. Ein Server im Internet braucht das nicht.
+if systemctl is-active --quiet systemd-resolved; then
+    mkdir -p /etc/systemd/resolved.conf.d
+    cat > /etc/systemd/resolved.conf.d/einfallstor.conf <<'EOF'
+[Resolve]
+LLMNR=no
+MulticastDNS=no
+EOF
+    systemctl restart systemd-resolved
+fi
 
 # --- 3. Sicherheitsupdates automatisch einspielen -----------------------------
 
