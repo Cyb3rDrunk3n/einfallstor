@@ -6,8 +6,8 @@
 #
 # Das Skript lässt sich gefahrlos ein zweites Mal starten.
 #
-# Stand: Entwurf vom 12.11.2026. Die Syntax ist geprüft, auf einem echten Server
-# ist das Skript noch nicht gelaufen. Zuerst in einer Test-VM ausprobieren.
+# Stand: am 12.11.2026 in einer virtuellen Maschine mit Debian 13.7 getestet
+# (frischer Lauf, Wiederholung, Neustart). Einzelheiten stehen in deploy/README.md.
 
 set -euo pipefail
 

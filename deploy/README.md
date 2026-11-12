@@ -2,7 +2,7 @@
 
 Gerät: gemieteter Linux-Server (VPS) mit Debian 13 „trixie“  ·  Stand: 12.11.2026  ·  Dauer: etwa 30 Minuten  ·  Risiko: mittel
 
-> **Stand des Pakets: Entwurf.** Skript, Dienstdatei und Caddy-Konfiguration sind auf Syntax geprüft, auf einem echten Server aber noch nicht gelaufen. Probiere die Einrichtung zuerst in einer Test-VM aus.
+> **Stand des Pakets:** am 12.11.2026 in einer virtuellen Maschine mit Debian 13.7 getestet, siehe Abschnitt „Getestet“. Noch nicht erprobt ist der Betrieb mit einer echten Domain und einem Zertifikat von Let's Encrypt.
 
 ## 1. Was wird geändert und warum
 
@@ -11,6 +11,7 @@ Ein frischer Debian-Server wird so eingerichtet, dass Einfallstor unter einer ei
 | Maßnahme | Wirkung |
 |---|---|
 | Firewall (ufw) | Von außen erreichbar sind nur SSH, HTTP und HTTPS. |
+| LLMNR abgeschaltet | Der Dienst für Namensauflösung im lokalen Netz lauscht nicht mehr auf Port 5355. |
 | SSH nur mit Schlüssel | Die Anmeldung mit Passwort ist abgeschaltet, Passwort-Raten läuft ins Leere. |
 | Automatische Updates | Sicherheitsupdates für Debian und Caddy kommen täglich von selbst. |
 | Eigener Dienstbenutzer | Einfallstor läuft ohne Administratorrechte. |
@@ -62,8 +63,9 @@ Nebenwirkungen: Ohne hinterlegten SSH-Schlüssel kommst du nach der Umstellung n
 | `systemctl is-active einfallstor caddy` | zweimal `active` |
 | `ufw status verbose` | eingehend verboten, erlaubt sind SSH, 80 und 443 |
 | `sshd -T \| grep -E 'passwordauthentication\|permitrootlogin'` | `passwordauthentication no`, `permitrootlogin without-password` |
-| `ss -tlnp` | Python lauscht nur auf `127.0.0.1:1337` |
-| `systemd-analyze security einfallstor` | Bewertung im grünen Bereich |
+| `ss -tlnp` | Python lauscht nur auf `127.0.0.1:1337`, von außen erreichbar sind allein die Ports 22, 80 und 443 |
+| `systemd-analyze security einfallstor` | Bewertung um 1,7 („OK“) |
+| elfmal mit falschem Passwort anmelden | zehnmal Statuscode 401, beim elften Mal 429 |
 | `https://deine.domain` im Browser | die Startseite, mit gültigem Zertifikat |
 | `http://deine.domain` im Browser | Umleitung auf HTTPS |
 
@@ -73,7 +75,27 @@ Nebenwirkungen: Ohne hinterlegten SSH-Schlüssel kommst du nach der Umstellung n
 2. Firewall abschalten: `ufw disable`
 3. Dienst entfernen: `systemctl disable --now einfallstor && rm /etc/systemd/system/einfallstor.service`
 4. Caddy zurücksetzen: `cp /etc/caddy/Caddyfile.original /etc/caddy/Caddyfile && systemctl reload caddy`
-5. Alles auf einmal: den Snapshot zurückspielen oder den Server beim Anbieter neu aufsetzen.
+5. LLMNR wieder einschalten: `rm /etc/systemd/resolved.conf.d/einfallstor.conf && systemctl restart systemd-resolved`
+6. Alles auf einmal: den Snapshot zurückspielen oder den Server beim Anbieter neu aufsetzen.
+
+## Getestet
+
+Am 12.11.2026 in einer virtuellen Maschine unter Hyper-V mit dem offiziellen Cloud-Abbild von Debian 13.7 (Kernel 6.12, Python 3.13, Caddy 2.11.9):
+
+- Lauf auf dem frischen System, zweiter und dritter Lauf hintereinander und Fortsetzen nach einem abgebrochenen Lauf: jeweils ohne Fehler.
+- Nach einem Neustart sind Firewall, Einfallstor und Caddy von selbst wieder aktiv.
+- Von außen sind nur die Ports 22, 80 und 443 erreichbar. Die Anmeldung per SSH mit Passwort wird abgelehnt.
+- Über Caddy antwortet die Seite per HTTP/2 mit HSTS, HTTP wird auf HTTPS umgeleitet, zu große Anfragen enden mit 413.
+- Das Sitzungs-Cookie trägt hinter Caddy das Kennzeichen `Secure`. Die Begrenzung der Anmeldeversuche zählt die Adresse des Besuchers.
+- Der Dienst kann außerhalb von `/var/lib/einfallstor` nicht schreiben und sieht keine Home-Verzeichnisse.
+- `unattended-upgrade --dry-run` führt das Archiv von Caddy unter den erlaubten Quellen.
+
+Nicht getestet: ein echtes Zertifikat von Let's Encrypt (im Test stellte Caddy für eine `.internal`-Adresse ein eigenes aus), das Abbild eines bestimmten Anbieters, Debian 12, IPv6 und ein tatsächlich eingespieltes automatisches Update samt Neustart.
+
+## Fehlersuche
+
+- **Das Skript bricht ab:** Die Meldung nennt die Stelle. Nach dem Beheben einfach noch einmal starten, das Skript setzt sauber fort.
+- **Downloads brechen ab oder hängen, obwohl das Netz sonst funktioniert:** Läuft der Server als virtuelle Maschine hinter einem VPN-Tunnel, ist oft die Paketgröße schuld. Ein Tunnel überträgt weniger als die üblichen 1500 Byte, und große Antwortpakete gehen dann verloren. `ip link set dev eth0 mtu 1400` behebt das für die laufende Sitzung.
 
 ## Betrieb
 

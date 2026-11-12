@@ -129,7 +129,7 @@ Der eingebaute Server ist für den Betrieb auf dem eigenen Rechner gedacht und l
 
 ## Öffentlich betreiben
 
-Im Ordner [deploy](deploy/README.md) liegt ein Einrichtungspaket für einen Debian-Server: Firewall, SSH nur mit Schlüssel, automatische Updates, ein abgeschotteter systemd-Dienst und Caddy als HTTPS-Proxy. Das Paket ist ein Entwurf und auf einem echten Server noch nicht gelaufen.
+Im Ordner [deploy](deploy/README.md) liegt ein Einrichtungspaket für einen Debian-Server: Firewall, SSH nur mit Schlüssel, automatische Updates, ein abgeschotteter systemd-Dienst und Caddy als HTTPS-Proxy. Das Paket ist in einer virtuellen Maschine mit Debian 13 getestet. Der Betrieb mit einer echten Domain und einem Zertifikat von Let's Encrypt ist noch nicht erprobt.
 
 Eine Sicherheitslücke gefunden? Bitte als Issue melden oder über die Funktion „Report a vulnerability“ des Repositorys.
 
