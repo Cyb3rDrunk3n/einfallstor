@@ -43,15 +43,28 @@ apt-get install -y python3 git ufw unattended-upgrades curl ca-certificates gnup
 
 # Caddy kommt aus dem Paketarchiv des Herstellers (https://caddyserver.com/docs/install).
 # Das Paket in Debian selbst ist deutlich älter.
-if [[ ! -f /usr/share/keyrings/caddy-stable-archive-keyring.gpg ]]; then
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
-        | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
-        > /etc/apt/sources.list.d/caddy-stable.list
-    chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
+SCHLUESSEL=/usr/share/keyrings/caddy-stable-archive-keyring.gpg
+QUELLE=/etc/apt/sources.list.d/caddy-stable.list
+if [[ ! -s "$SCHLUESSEL" || ! -s "$QUELLE" ]]; then
+    # Erst in einen Zwischenordner laden. So bleibt nach einem abgebrochenen
+    # Download keine leere Datei zurück, die beim nächsten Lauf als fertig gilt.
+    ZWISCHEN="$(mktemp -d)"
+    curl -1sLf --retry 3 -o "$ZWISCHEN/gpg.key" 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+        || abbruch "Der Schlüssel des Caddy-Archivs ließ sich nicht laden."
+    curl -1sLf --retry 3 -o "$ZWISCHEN/caddy.list" 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+        || abbruch "Die Quellenangabe des Caddy-Archivs ließ sich nicht laden."
+    gpg --dearmor < "$ZWISCHEN/gpg.key" > "$ZWISCHEN/keyring.gpg"
+    install -m 0644 "$ZWISCHEN/keyring.gpg" "$SCHLUESSEL"
+    install -m 0644 "$ZWISCHEN/caddy.list" "$QUELLE"
+    rm -rf "$ZWISCHEN"
     apt-get update
 fi
 apt-get install -y caddy
+
+# Sicherstellen, dass wirklich die Fassung des Herstellers installiert ist.
+CADDY_VERSION="$(dpkg-query -W -f='${Version}' caddy)"
+apt-cache madison caddy | awk -v version="$CADDY_VERSION" '$3 == version && /cloudsmith/ { found = 1 } END { exit !found }' \
+    || abbruch "Caddy $CADDY_VERSION stammt nicht aus dem Archiv des Herstellers."
 
 # --- 2. Firewall: eingehend nur SSH, HTTP und HTTPS ---------------------------
 
