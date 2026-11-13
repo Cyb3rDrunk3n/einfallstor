@@ -63,10 +63,15 @@ class Client:
 
 class ServerCase(unittest.TestCase):
     behind_proxy = False
+    pages = {}  # Betreiberseiten für diesen Server: Name -> Markdown-Text
 
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.mkdtemp(prefix="einfallstor-test-")
+        for name, text in cls.pages.items():
+            folder = Path(cls.tmp) / "seiten"
+            folder.mkdir(exist_ok=True)
+            (folder / f"{name}.md").write_text(text, encoding="utf-8")
         cls.server = server.create_server("127.0.0.1", 0, str(Path(cls.tmp) / "test.db"), cls.behind_proxy)
         cls.port = cls.server.server_address[1]
         cls.app = cls.server.app
@@ -140,6 +145,22 @@ class ContentTests(unittest.TestCase):
         self.assertIn("# kein Titel &lt;x&gt;", rendered)
         self.assertIn('class="callout callout-tipp"', rendered)
 
+    def test_markdown_hard_line_break(self):
+        rendered = content.render_markdown("Zeile eins\\\nZeile zwei\ngeht weiter")
+        self.assertEqual(rendered, "<p>Zeile eins<br>Zeile zwei geht weiter</p>")
+
+    def test_templates_for_operator_pages(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for name in content.PAGES:
+                shutil.copy(content.CONTENT_DIR / "rechtliches" / f"{name}.beispiel.md", Path(folder) / f"{name}.md")
+            pages = content.load_pages(Path(folder))
+        self.assertEqual(set(pages), set(content.PAGES))
+        for name, page in pages.items():
+            self.assertIn("<h2>", page["html"], name)
+            self.assertTrue(page["placeholders"], name)  # eine unausgefüllte Vorlage fällt auf
+        self.assertIn("[E-MAIL-ADRESSE]", pages["impressum"]["placeholders"])
+        self.assertEqual(content.load_pages(Path(folder) / "gibt-es-nicht"), {})
+
     def test_missions_match_the_filesystem(self):
         terminal = content.load_terminal()
         files = terminal.public["files"]
@@ -193,6 +214,7 @@ class AccountTests(ServerCase):
         self.assertEqual(response.status, 200)
         self.assertIsNone(data["user"])
         self.assertEqual(data["stats"]["lessons"], len(self.app.course.lessons))
+        self.assertEqual(data["pages"], [])  # ohne hinterlegte Dateien gibt es keine Betreiberseiten
 
     def test_register_validation(self):
         client = self.client()
@@ -414,6 +436,34 @@ class ProxyTests(ServerCase):
             self.attempt("198.51.100.20")
         # Der Proxy hängt die echte Adresse hinten an. Vorangestellte Werte stammen vom Client.
         self.assertEqual(self.attempt("10.1.2.3, 198.51.100.20"), 429)
+
+
+class PageTests(ServerCase):
+    """Impressum und Datenschutzerklärung kommen aus Dateien des Betreibers neben der Datenbank."""
+
+    pages = {
+        "impressum": "## Angaben\n\nErika Beispiel\\\nMusterweg 1\\\n12345 Musterstadt\n\n"
+        "E-Mail: [E-MAIL-ADRESSE] <script>alert(1)</script>\n"
+    }
+
+    def test_existing_page_is_served(self):
+        self.assertEqual(self.client().get("/api/me")[1]["pages"], ["impressum"])
+        response, page = self.client().get("/api/pages/impressum")
+        self.assertEqual(response.status, 200)
+        self.assertEqual(page["title"], "Impressum")
+        self.assertIn("Erika Beispiel<br>Musterweg 1<br>12345 Musterstadt", page["html"])
+        self.assertNotIn("<script>", page["html"])
+
+    def test_missing_and_unknown_pages(self):
+        self.assertEqual(self.client().get("/api/pages/datenschutz")[0].status, 404)
+        self.assertEqual(self.client().get("/api/pages/gibt-es-nicht")[0].status, 404)
+
+    def test_notes_at_start(self):
+        public = self.app.page_notes(public=True)
+        self.assertEqual(len(public), 2)
+        self.assertIn("[E-MAIL-ADRESSE]", public[0])  # offener Platzhalter im Impressum
+        self.assertIn("datenschutz.md", public[1])  # fehlende Datenschutzerklärung
+        self.assertEqual(len(self.app.page_notes(public=False)), 1)  # lokal stört eine fehlende Seite nicht
 
 
 class UnitTests(unittest.TestCase):

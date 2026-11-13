@@ -6,6 +6,7 @@ import re
 import sqlite3
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 from . import content, db, security
 
@@ -39,6 +40,8 @@ class App:
         self.course = content.load_course()
         self.terminal = content.load_terminal()
         self.glossary = content.load_glossary()
+        self.pages_dir = Path(self.db_path).parent / "seiten"
+        self.pages = content.load_pages(self.pages_dir)
         for mission in self.terminal.missions.values():
             lesson = mission.get("lesson")
             if lesson and lesson not in self.course.by_id:
@@ -57,6 +60,18 @@ class App:
             "register": security.RateLimiter(limit=10, window=600),
             "answer": security.RateLimiter(limit=60, window=60),
         }
+
+    def page_notes(self, public: bool) -> list[str]:
+        """Hinweise für den Start: offene Platzhalter und, im öffentlichen Betrieb, fehlende Seiten."""
+        notes = []
+        for name, title in content.PAGES.items():
+            page = self.pages.get(name)
+            if page is None:
+                if public:
+                    notes.append(f"{title} fehlt. Erwartet wird die Datei {self.pages_dir / (name + '.md')}.")
+            elif page["placeholders"]:
+                notes.append(f"{title} enthält noch Platzhalter, zum Beispiel {page['placeholders'][0]}.")
+        return notes
 
 
 @dataclass
@@ -168,7 +183,18 @@ def _normalize(answer: str) -> str:
 
 
 def get_me(req: Request):
-    return 200, {"user": _summary(req) if req.user else None, "stats": req.app.stats}
+    return 200, {
+        "user": _summary(req) if req.user else None,
+        "stats": req.app.stats,
+        "pages": sorted(req.app.pages),  # welche Betreiberseiten es gibt, für die Fußzeile
+    }
+
+
+def get_page(req: Request):
+    page = req.app.pages.get(req.params[0])
+    if page is None:
+        raise ApiError(404, "Diese Seite gibt es nicht.")
+    return 200, {"title": page["title"], "html": page["html"]}
 
 
 def get_course(req: Request):
@@ -328,6 +354,7 @@ ROUTES = [
     ("GET", re.compile(r"/api/terminal"), get_terminal),
     ("POST", re.compile(rf"/api/missions/{_SLUG}"), post_mission),
     ("GET", re.compile(r"/api/glossary"), get_glossary),
+    ("GET", re.compile(rf"/api/pages/{_SLUG}"), get_page),
     ("GET", re.compile(r"/api/leaderboard"), get_leaderboard),
     ("POST", re.compile(r"/api/register"), post_register),
     ("POST", re.compile(r"/api/login"), post_login),

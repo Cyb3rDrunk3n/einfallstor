@@ -48,7 +48,7 @@ export async function api(path, body) {
 
 // --- Zustand -------------------------------------------------------------------
 
-export const store = { me: null, stats: null, course: null };
+export const store = { me: null, stats: null, course: null, pages: [] };
 
 export function setMe(user) {
   store.me = user;
@@ -58,6 +58,7 @@ export function setMe(user) {
 export async function loadMe() {
   const data = await api('/me');
   store.stats = data.stats;
+  store.pages = data.pages || [];
   setMe(data.user);
   return data.user;
 }

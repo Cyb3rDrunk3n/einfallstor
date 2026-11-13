@@ -179,11 +179,17 @@ def render_markdown(text: str) -> str:
             block, i = _list(lines, i, _ORDERED, "ol")
             out.append(block)
         else:
-            paragraph = []
+            # Ein Backslash am Zeilenende erzwingt einen Zeilenumbruch, etwa in einer Anschrift.
+            groups = [[]]
             while i < len(lines) and lines[i].strip() and not _starts_block(lines[i]):
-                paragraph.append(lines[i].strip())
+                line = lines[i].strip()
+                if line.endswith("\\"):
+                    groups[-1].append(line[:-1].rstrip())
+                    groups.append([])
+                else:
+                    groups[-1].append(line)
                 i += 1
-            out.append(f"<p>{_inline(' '.join(paragraph))}</p>")
+            out.append("<p>" + "<br>".join(_inline(" ".join(group)) for group in groups if group) + "</p>")
     return "\n".join(out)
 
 
@@ -359,3 +365,29 @@ def load_terminal(path: Path = CONTENT_DIR / "terminal.json") -> Terminal:
 def load_glossary(path: Path = CONTENT_DIR / "glossar.json") -> list[dict]:
     entries = json.loads(path.read_text(encoding="utf-8"))
     return sorted(entries, key=lambda entry: entry["term"].lower().translate(_UMLAUTS))
+
+
+# --- Impressum und Datenschutzerklärung -------------------------------------
+# Diese Seiten gehören zum Betreiber, nicht zum Projekt. Sie liegen deshalb
+# außerhalb des Repositorys im Ordner "seiten" neben der Datenbank. Vorlagen
+# zum Ausfüllen stehen in content/rechtliches/.
+
+PAGES = {"impressum": "Impressum", "datenschutz": "Datenschutzerklärung"}
+
+# Platzhalter der Vorlagen: Großbuchstaben in eckigen Klammern, zum Beispiel [E-MAIL-ADRESSE].
+_PLACEHOLDER = re.compile(r"\[[A-ZÄÖÜ0-9][A-ZÄÖÜ0-9 ,.:/-]{2,}\]")
+
+
+def load_pages(directory: Path) -> dict[str, dict]:
+    """Liest die vorhandenen Betreiberseiten. Fehlende Dateien sind kein Fehler."""
+    pages = {}
+    for name, title in PAGES.items():
+        path = directory / f"{name}.md"
+        if path.is_file():
+            text = path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+            pages[name] = {
+                "title": title,
+                "html": render_markdown(text),
+                "placeholders": sorted(set(_PLACEHOLDER.findall(text))),
+            }
+    return pages

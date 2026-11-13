@@ -95,6 +95,7 @@ export const register = {
           <button class="btn btn-primary btn-lg" type="submit">Konto erstellen</button>
           <p class="auth-alt">Schon dabei? <a href="#/anmelden">Anmelden</a></p>
           <p class="auth-alt hint">Ohne E-Mail-Adresse gibt es kein „Passwort vergessen“. Bewahre das Passwort gut auf.</p>
+          ${store.pages.includes('datenschutz') ? '<p class="auth-alt hint">Was gespeichert wird, steht in der <a href="#/datenschutz">Datenschutzerklärung</a>.</p>' : ''}
         </form>
       </section>`;
     wire(

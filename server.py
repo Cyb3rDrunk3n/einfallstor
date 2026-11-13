@@ -273,7 +273,9 @@ def main() -> None:
     stats = server.app.stats
     print(f"Einfallstor läuft auf {url}")
     print(f"{stats['modules']} Module, {stats['lessons']} Lektionen, {stats['questions']} Quizfragen, {stats['missions']} Missionen")
-    print("Beenden mit Strg+C")
+    for note in server.app.page_notes(public=args.behind_proxy):
+        print(f"Hinweis: {note}")
+    print("Beenden mit Strg+C", flush=True)  # flush, damit die Zeilen auch im Journal des Servers sofort stehen
     if args.open:
         threading.Timer(0.6, webbrowser.open, args=(url,)).start()
     try:

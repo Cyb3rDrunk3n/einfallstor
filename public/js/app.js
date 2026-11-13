@@ -31,7 +31,11 @@ const ROUTES = [
   { pattern: /^\/registrieren$/, view: konto.register, nav: 'konto', title: 'Konto erstellen' },
   { pattern: /^\/sicherheit$/, view: seiten.sicherheit, nav: 'seite', title: 'Sicherheitskonzept' },
   { pattern: /^\/kodex$/, view: seiten.kodex, nav: 'seite', title: 'Kodex' },
+  { pattern: /^\/(impressum|datenschutz)$/, view: seiten.rechtliches, nav: 'seite', title: 'Rechtliches' },
 ];
+
+// Betreiberseiten: Der Server liefert sie nur, wenn der Betreiber sie hinterlegt hat.
+const LEGAL_LINKS = { impressum: 'Impressum', datenschutz: 'Datenschutz' };
 
 const main = $('#inhalt');
 const menu = $('#nav-menu');
@@ -139,6 +143,9 @@ async function boot() {
     renderUser();
     main.innerHTML = errorPage(`${error.message} Läuft der Server noch?`);
     return;
+  }
+  for (const [name, label] of Object.entries(LEGAL_LINKS)) {
+    if (store.pages.includes(name)) $('.footer-links').insertAdjacentHTML('beforeend', `<a href="#/${name}">${label}</a>`);
   }
   window.addEventListener('hashchange', navigate);
   navigate();

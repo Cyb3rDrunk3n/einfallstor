@@ -56,6 +56,28 @@ Nebenwirkungen: Ohne hinterlegten SSH-Schlüssel kommst du nach der Umstellung n
 
 4. Die bestehende SSH-Sitzung offen lassen und in einem zweiten Fenster eine neue Verbindung aufbauen. Erst wenn die klappt, die erste schließen.
 
+5. Impressum und Datenschutzerklärung hinterlegen. Die Vorlagen kopieren:
+
+   ```bash
+   install -d -m 0755 /var/lib/einfallstor/seiten
+   ```
+
+   ```bash
+   cp /opt/einfallstor/content/rechtliches/impressum.beispiel.md /var/lib/einfallstor/seiten/impressum.md
+   ```
+
+   ```bash
+   cp /opt/einfallstor/content/rechtliches/datenschutz.beispiel.md /var/lib/einfallstor/seiten/datenschutz.md
+   ```
+
+   In beiden Dateien die Platzhalter in eckigen Klammern ersetzen, zum Beispiel mit `nano /var/lib/einfallstor/seiten/impressum.md`. Danach den Dienst neu starten:
+
+   ```bash
+   systemctl restart einfallstor
+   ```
+
+   Die Vorlagen sind ein Ausgangspunkt und keine Rechtsberatung. Prüfe vor allem die Angaben zum Hosting-Anbieter, zum Standort des Servers und zur Aufsichtsbehörde. Die 14 Tage Aufbewahrung der Protokolle stimmen, wenn der Server mit diesem Paket eingerichtet wurde.
+
 ## 3. Prüfen
 
 | Prüfung | Erwartetes Ergebnis |
@@ -66,6 +88,8 @@ Nebenwirkungen: Ohne hinterlegten SSH-Schlüssel kommst du nach der Umstellung n
 | `ss -tlnp` | Python lauscht nur auf `127.0.0.1:1337`, von außen erreichbar sind allein die Ports 22, 80 und 443 |
 | `systemd-analyze security einfallstor` | Bewertung um 1,7 („OK“) |
 | elfmal mit falschem Passwort anmelden | zehnmal Statuscode 401, beim elften Mal 429 |
+| `journalctl -u einfallstor -n 8` nach dem Neustart | keine Zeile „Hinweis:“, also keine fehlende Seite und kein offener Platzhalter |
+| Fußzeile der Seite | Links zu Impressum und Datenschutz |
 | `https://deine.domain` im Browser | die Startseite, mit gültigem Zertifikat |
 | `http://deine.domain` im Browser | Umleitung auf HTTPS |
 
@@ -109,7 +133,7 @@ Nicht getestet: ein echtes Zertifikat von Let's Encrypt (im Test stellte Caddy f
 
 ## Was dieses Paket nicht abdeckt
 
-- **Impressum und Datenschutzerklärung:** Wer die Seite in Deutschland öffentlich betreibt, braucht in aller Regel beides. Die Anwendung bringt dafür noch keine Seiten mit. Sie speichert Benutzernamen, Passwort-Hashes und Lernfortschritt und setzt ein technisch nötiges Sitzungs-Cookie.
+- **Rechtliche Prüfung:** Die Vorlagen für Impressum und Datenschutzerklärung beschreiben, was die Anwendung verarbeitet. Ob sie für deinen Fall vollständig sind, kann nur eine Rechtsberatung klären.
 - **Überwachung:** Niemand wird benachrichtigt, wenn der Dienst ausfällt oder ungewöhnlich viele Anfragen kommen.
 - **Sicherungen außer Haus:** Die Datenbank wird nicht automatisch an einen zweiten Ort kopiert.
 - **Schutz vor Überlastung:** Gegen eine Flut von Anfragen hilft nur ein vorgeschalteter Dienst des Anbieters.

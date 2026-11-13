@@ -1,6 +1,6 @@
 // Feste Seiten: Sicherheitskonzept, Kodex, Fehlerseite
 
-import { esc, icon, loadCourse } from '../lib.js';
+import { api, esc, icon, loadCourse } from '../lib.js';
 
 const MEASURES = [
   {
@@ -123,6 +123,22 @@ export const kodex = {
         </ol>
         <p class="hint">Die rechtlichen Hintergründe erklärt die Lektion <a href="#/kurs/einstieg/recht-und-ethik-erst-die-erlaubnis">Recht und Ethik</a>. Sie ersetzt keine Rechtsberatung.</p>
         <p class="cert-actions"><a class="btn btn-primary" href="#/kurs">Zum Kurs ${icon('arrowRight')}</a></p>
+      </section>`;
+  },
+};
+
+/** Impressum und Datenschutzerklärung. Den Text hinterlegt der Betreiber, der Server rendert ihn. */
+export const rechtliches = {
+  load: ([name]) => api(`/pages/${name}`),
+  title: (page) => page.title,
+  mount(root, page) {
+    root.innerHTML = `
+      <section class="wrap page-head doc">
+        <span class="kicker">Rechtliches</span>
+        <h1>${esc(page.title)}</h1>
+      </section>
+      <section class="wrap doc">
+        <div class="prose">${page.html}</div>
       </section>`;
   },
 };

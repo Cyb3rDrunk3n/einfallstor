@@ -69,6 +69,7 @@ einfallstor/
 │   └── security.py      Passwort-Hashing, Sitzungen, Begrenzung von Anfragen
 ├── content/
 │   ├── kurs/            ein Markdown-Dokument je Modul
+│   ├── rechtliches/     Vorlagen für Impressum und Datenschutzerklärung
 │   ├── terminal.json    Dateisystem und Missionen des Übungsterminals
 │   └── glossar.json
 ├── public/              Frontend: index.html, CSS, JavaScript-Module
@@ -126,6 +127,19 @@ Die Plattform setzt um, was der Kurs lehrt. Die Seite „Sicherheitskonzept“ i
 - Quizlösungen und Lösungswörter bleiben auf dem Server.
 
 Der eingebaute Server ist für den Betrieb auf dem eigenen Rechner gedacht und lauscht deshalb nur auf 127.0.0.1. Wer die Plattform für andere anbietet, stellt einen Reverse Proxy mit HTTPS davor und startet den Server mit `--behind-proxy`, damit die Begrenzung der Anmeldeversuche die Adresse des Besuchers zählt und nicht die des Proxys. Die Begrenzung lebt im Arbeitsspeicher und beginnt nach einem Neustart von vorn.
+
+## Impressum und Datenschutzerklärung
+
+Wer die Plattform öffentlich betreibt, braucht in Deutschland in aller Regel ein Impressum und eine Datenschutzerklärung. Beide Seiten gehören zum Betreiber und nicht ins Repository. Der Server liest sie deshalb aus dem Ordner `seiten` neben der Datenbank:
+
+| Datei | Seite |
+|---|---|
+| `data/seiten/impressum.md` | Impressum |
+| `data/seiten/datenschutz.md` | Datenschutzerklärung |
+
+Vorlagen liegen in `content/rechtliches/`. Kopiere sie an die genannten Stellen, ersetze die Platzhalter in eckigen Klammern und starte den Server neu. Danach erscheinen die Links in der Fußzeile, und das Formular zum Anlegen eines Kontos verweist auf die Datenschutzerklärung. Solange Platzhalter übrig sind, meldet der Server das beim Start.
+
+Die Vorlage zur Datenschutzerklärung beschreibt, was die Anwendung verarbeitet: Serverprotokoll, Konto, Rangliste und das Sitzungs-Cookie. Die Angaben zum Hosting, zur Aufbewahrung der Protokolle und zur Aufsichtsbehörde müssen zum eigenen Betrieb passen. Die Vorlagen sind ein Ausgangspunkt und keine Rechtsberatung.
 
 ## Öffentlich betreiben
 

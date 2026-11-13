@@ -179,3 +179,11 @@ Das Zertifikat holt Caddy selbst, sobald der DNS-Eintrag von ${DOMAIN}
 auf diesen Server zeigt. Öffne jetzt in einem zweiten Fenster eine neue
 SSH-Verbindung, bevor du diese schließt.
 EOF
+
+if [[ ! -s /var/lib/einfallstor/seiten/impressum.md || ! -s /var/lib/einfallstor/seiten/datenschutz.md ]]; then
+    cat <<EOF
+
+Noch offen: Impressum und Datenschutzerklärung. Wie du sie hinterlegst,
+steht in ${ZIEL}/deploy/README.md unter Schritt 5.
+EOF
+fi
