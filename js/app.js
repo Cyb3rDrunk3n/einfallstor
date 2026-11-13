@@ -1,0 +1,193 @@
+// Einstieg: Navigation, Routen und Wechsel zwischen den Ansichten.
+//
+// Jede Ansicht ist ein Objekt mit
+//   load(params)              optional, lädt Daten und darf warten
+//   mount(root, data, params) baut die Seite auf und gibt bei Bedarf eine Aufräumfunktion zurück
+//   title(data)               optional, Seitentitel
+
+import { $, $$, REPO_URL, esc, icon, isStatic, loadMe, store } from './lib.js';
+import { startNetwork } from './fx.js';
+import * as glossar from './views/glossar.js';
+import * as konto from './views/konto.js';
+import * as kurs from './views/kurs.js';
+import * as landing from './views/landing.js';
+import * as lektion from './views/lektion.js';
+import * as profil from './views/profil.js';
+import * as rangliste from './views/rangliste.js';
+import * as seiten from './views/seiten.js';
+import * as terminal from './views/terminal.js';
+import * as werkzeuge from './views/werkzeuge.js';
+
+const ROUTES = [
+  { pattern: /^\/$/, view: landing, nav: 'start', title: '' },
+  { pattern: /^\/kurs$/, view: kurs, nav: 'kurs', title: 'Kurs' },
+  { pattern: /^\/kurs\/([a-z0-9-]+)\/([a-z0-9-]+)$/, view: lektion, nav: 'kurs', title: 'Lektion' },
+  { pattern: /^\/terminal$/, view: terminal, nav: 'terminal', title: 'Übungsterminal' },
+  { pattern: /^\/werkzeuge$/, view: werkzeuge, nav: 'werkzeuge', title: 'Werkzeuge' },
+  { pattern: /^\/glossar$/, view: glossar, nav: 'glossar', title: 'Glossar' },
+  { pattern: /^\/profil$/, view: profil, nav: 'profil', title: 'Profil' },
+  // Konten und Rangliste gibt es nur mit Server. In der statischen Ausgabe enden diese Adressen auf der 404-Seite.
+  ...(isStatic ? [] : [
+    { pattern: /^\/rangliste$/, view: rangliste, nav: 'rangliste', title: 'Rangliste' },
+    { pattern: /^\/anmelden$/, view: konto.login, nav: 'konto', title: 'Anmelden' },
+    { pattern: /^\/registrieren$/, view: konto.register, nav: 'konto', title: 'Konto erstellen' },
+  ]),
+  { pattern: /^\/sicherheit$/, view: seiten.sicherheit, nav: 'seite', title: 'Sicherheitskonzept' },
+  { pattern: /^\/kodex$/, view: seiten.kodex, nav: 'seite', title: 'Kodex' },
+  { pattern: /^\/(impressum|datenschutz)$/, view: seiten.rechtliches, nav: 'seite', title: 'Rechtliches' },
+];
+
+// Betreiberseiten: Der Server liefert sie nur, wenn der Betreiber sie hinterlegt hat.
+const LEGAL_LINKS = { impressum: 'Impressum', datenschutz: 'Datenschutz' };
+
+const main = $('#inhalt');
+const menu = $('#nav-menu');
+const toggle = $('#nav-toggle');
+let cleanup = null;
+let ticket = 0;
+let firstRender = true;
+
+function setMenu(open) {
+  menu.classList.toggle('open', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-label', open ? 'Menü schließen' : 'Menü öffnen');
+}
+
+function renderUser() {
+  const me = store.me;
+  $('#nav-user').innerHTML = me
+    ? `<a class="chip-user" href="#/profil" title="Zum Profil">${icon('user')}<span>${esc(me.name)}</span><b>${me.xp} XP</b></a>`
+    : `<a class="btn btn-ghost btn-sm" href="#/anmelden">Anmelden</a>
+       <a class="btn btn-primary btn-sm" href="#/registrieren">Konto erstellen</a>`;
+}
+
+/** Hinweisleiste der statischen Ausgabe. Wer sie schließt, sieht sie in diesem Browser nicht wieder. */
+function showNotice() {
+  const key = 'einfallstor.hinweis';
+  const notice = $('#notice');
+  try {
+    if (localStorage.getItem(key)) return;
+  } catch {
+    // gesperrter Speicher: Die Leiste erscheint dann bei jedem Besuch
+  }
+  notice.innerHTML = `
+    <div class="wrap notice-inner">
+      ${icon('info')}
+      <p>Du nutzt die Ausgabe ohne Server. Dein Fortschritt bleibt in diesem Browser. Wo der Kurs von Anmeldung, Konto oder Cookie dieser Plattform spricht, ist die <a href="${REPO_URL}" rel="noopener">Fassung mit Server</a> gemeint.</p>
+      <button class="notice-close" type="button" aria-label="Hinweis schließen">${icon('x')}</button>
+    </div>`;
+  notice.hidden = false;
+  $('button', notice).addEventListener('click', () => {
+    notice.hidden = true;
+    try {
+      localStorage.setItem(key, '1');
+    } catch {
+      // dann eben nur bis zum Neuladen
+    }
+  });
+}
+
+function errorPage(message) {
+  return `<section class="wrap not-found">
+    <h1>Das hat nicht geklappt</h1>
+    <p class="lead">${esc(message)}</p>
+    <p class="cert-actions"><a class="btn btn-primary" href="#/">Zur Startseite</a></p>
+  </section>`;
+}
+
+async function navigate() {
+  if (location.hash && !location.hash.startsWith('#/')) return; // Sprungmarke wie #inhalt, keine Route
+  const path = location.hash.slice(1) || '/';
+  const current = ++ticket;
+
+  let route = { view: seiten.notFound, nav: '', title: 'Nicht gefunden' };
+  let params = [];
+  for (const candidate of ROUTES) {
+    const match = candidate.pattern.exec(path);
+    if (match) {
+      route = candidate;
+      params = match.slice(1);
+      break;
+    }
+  }
+
+  setMenu(false);
+  document.body.classList.add('is-loading');
+  let data;
+  let failure = null;
+  try {
+    if (route.view.load) data = await route.view.load(params);
+  } catch (error) {
+    failure = error;
+  }
+  if (current !== ticket) return; // inzwischen wurde woandershin navigiert
+  document.body.classList.remove('is-loading');
+
+  if (cleanup) cleanup();
+  cleanup = null;
+  if (failure?.status === 404) {
+    route = { view: seiten.notFound, nav: '', title: 'Nicht gefunden' };
+    failure = null;
+  }
+
+  document.body.dataset.route = route.nav;
+  for (const link of $$('[data-nav]')) {
+    if (link.dataset.nav === route.nav) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+
+  main.classList.remove('enter');
+  let title = route.title;
+  if (failure) {
+    main.innerHTML = errorPage(failure.message);
+  } else {
+    cleanup = route.view.mount(main, data, params) || null;
+    if (route.view.title) title = route.view.title(data);
+  }
+  document.title = title ? `${title} · Einfallstor` : 'Einfallstor · Pentesting lernen von null';
+  window.scrollTo(0, 0);
+  void main.offsetWidth; // erzwingt einen Neustart der Einblend-Animation
+  main.classList.add('enter');
+  if (!firstRender) main.focus({ preventScroll: true });
+  firstRender = false;
+}
+
+async function boot() {
+  // Schutz vor Clickjacking: In einem Frame startet die Anwendung nicht. Mit Server verbietet schon
+  // die Kopfzeile X-Frame-Options die Einbettung, GitHub Pages kann solche Kopfzeilen nicht senden.
+  if (window.top !== window.self) {
+    document.body.innerHTML = `<p class="framed">Einfallstor lässt sich nicht in andere Seiten einbetten. <a href="${esc(location.href)}" target="_top" rel="noopener">Seite direkt öffnen</a></p>`;
+    return;
+  }
+  startNetwork($('#netz'));
+  document.addEventListener('me', renderUser);
+  toggle.addEventListener('click', () => setMenu(!menu.classList.contains('open')));
+
+  // Lichtfleck, der auf Karten dem Mauszeiger folgt
+  document.addEventListener('pointermove', (event) => {
+    const card = event.target.closest?.('.card');
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${event.clientX - box.left}px`);
+    card.style.setProperty('--my', `${event.clientY - box.top}px`);
+  });
+
+  try {
+    await loadMe();
+  } catch (error) {
+    renderUser();
+    main.innerHTML = errorPage(isStatic ? error.message : `${error.message} Läuft der Server noch?`);
+    return;
+  }
+  if (isStatic) {
+    $('[data-nav="rangliste"]').remove();
+    showNotice();
+  }
+  for (const [name, label] of Object.entries(LEGAL_LINKS)) {
+    if (store.pages.includes(name)) $('.footer-links').insertAdjacentHTML('beforeend', `<a href="#/${name}">${label}</a>`);
+  }
+  window.addEventListener('hashchange', navigate);
+  navigate();
+}
+
+boot();
