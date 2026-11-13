@@ -4,8 +4,6 @@ Pentesting lernen von null: eine Lernplattform für absolute Einsteiger mit Kurs
 
 Das Backend ist reines Python ohne Abhängigkeiten, das Frontend kommt ohne Framework und ohne Build-Schritt aus. Klonen, starten, lernen.
 
-**Direkt ausprobieren:** https://cyb3rdrunk3n.github.io/einfallstor/ (statische Ausgabe ohne Konten, der Fortschritt bleibt im Browser)
-
 ![Startseite von Einfallstor](docs/startseite.jpg)
 
 ## Was drin ist
