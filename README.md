@@ -128,6 +128,7 @@ Die Plattform setzt um, was der Kurs lehrt. Die Seite „Sicherheitskonzept“ i
 - Schreibende Anfragen müssen JSON sein und vom eigenen Ursprung stammen.
 - Anmeldeversuche sind begrenzt, die Fehlermeldung verrät nicht, ob ein Konto existiert.
 - Quizlösungen und Lösungswörter bleiben auf dem Server.
+- Ausgeliefert werden nur Dateien, die beim Start im Ordner `public` lagen. Der Pfad einer Anfrage dient nur zum Nachschlagen in dieser Liste und berührt das Dateisystem nie.
 
 Der eingebaute Server ist für den Betrieb auf dem eigenen Rechner gedacht und lauscht deshalb nur auf 127.0.0.1. Wer die Plattform für andere anbietet, stellt einen Reverse Proxy mit HTTPS davor und startet den Server mit `--behind-proxy`, damit die Begrenzung der Anmeldeversuche die Adresse des Besuchers zählt und nicht die des Proxys. Die Begrenzung lebt im Arbeitsspeicher und beginnt nach einem Neustart von vorn.
 

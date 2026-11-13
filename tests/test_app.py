@@ -221,6 +221,30 @@ class StaticTests(ServerCase):
             response, _ = self.client().get(path)
             self.assertEqual(response.status, 404, path)
 
+    def test_request_paths_never_reach_the_filesystem(self):
+        # Unter Windows baut schon das Auflösen von \\rechner\freigabe eine Netzwerkverbindung auf,
+        # und Gerätenamen wie con sind besondere Dateien. Der Server schlägt deshalb nur in seiner Liste nach.
+        paths = (
+            "/%5C%5C192.0.2.1%5Cfreigabe%5Cdatei", "/C:/Windows/win.ini", "/%5C%5C.%5Cpipe%5Cx",
+            "/con", "/js/app.js:strom", "/js/../index.html", "/JS/APP.JS", "/js/app.js/",
+        )
+        forbidden = AssertionError("Dateisystemzugriff mit einem Pfad aus der Anfrage")
+        with mock.patch.object(Path, "resolve", side_effect=forbidden), \
+                mock.patch.object(Path, "is_file", side_effect=forbidden), \
+                mock.patch.object(Path, "stat", side_effect=forbidden):
+            for path in paths:
+                response, _ = self.client().get(path)
+                self.assertEqual(response.status, 404, path)
+        self.assertEqual(self.client().get("/js/app.js")[0].status, 200)
+        self.assertEqual(self.client().get("//js/app.js")[0].status, 200)
+        files = server.PUBLIC_FILES
+        self.assertIn("index.html", files)
+        self.assertIn("js/views/terminal.js", files)
+        for name, path in files.items():
+            self.assertNotIn("..", name)
+            self.assertFalse(name.startswith("/") or "\\" in name, name)
+            self.assertTrue(path.is_relative_to(server.PUBLIC_DIR), name)
+
     def test_unknown_paths(self):
         self.assertEqual(self.client().get("/gibt-es-nicht.html")[0].status, 404)
         response, data = self.client().get("/api/gibt-es-nicht")

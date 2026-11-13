@@ -69,7 +69,7 @@ const MEASURES = [
   {
     icon: 'file',
     title: 'Kein Zugriff außerhalb von public',
-    text: 'Dateipfade werden aufgelöst und geprüft, bevor der Server etwas ausliefert. Anfragen, die aus dem öffentlichen Ordner herausführen würden, enden mit 404.',
+    text: 'Der Server liefert nur Dateien aus, die er beim Start im Ordner public gefunden hat. Der Pfad einer Anfrage dient nur zum Nachschlagen in dieser Liste und berührt das Dateisystem nie. Alles andere endet mit 404.',
     code: 'server.py',
     lesson: null,
   },

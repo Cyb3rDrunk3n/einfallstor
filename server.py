@@ -28,6 +28,28 @@ ROOT = Path(__file__).resolve().parent
 PUBLIC_DIR = (ROOT / "public").resolve()
 MAX_BODY = 8 * 1024
 
+
+def _public_files() -> dict[str, Path]:
+    """Alle Dateien, die der Server ausliefert: Adresse relativ zu public/ -> Datei.
+
+    Der Pfad einer Anfrage dient nur als Schlüssel in dieser Liste und berührt das
+    Dateisystem nie. Damit scheitern Path Traversal und alle Tricks mit Laufwerken,
+    Netzwerkpfaden und Gerätenamen an derselben Stelle. Wichtig ist das vor allem
+    unter Windows: Dort baut schon das Auflösen eines Pfads wie \\\\rechner\\freigabe
+    eine Verbindung zu einem fremden Rechner auf, noch bevor eine Prüfung ihn ablehnt.
+
+    Die Liste entsteht beim Start. Neue Dateien in public/ erkennt der Server nach
+    einem Neustart. Verknüpfungen, die aus public/ herausführen, bleiben draußen.
+    """
+    files = {}
+    for path in PUBLIC_DIR.rglob("*"):
+        if path.is_file() and path.resolve().is_relative_to(PUBLIC_DIR):
+            files[path.relative_to(PUBLIC_DIR).as_posix()] = path
+    return files
+
+
+PUBLIC_FILES = _public_files()
+
 MIME = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -120,15 +142,9 @@ class Handler(BaseHTTPRequestHandler):
     do_GET = do_HEAD = do_POST = _handle
 
     def _handle_static(self, path: str) -> None:
-        relative = "index.html" if path == "/" else path.lstrip("/")
-        try:
-            # resolve() löst ".." auf. Liegt das Ergebnis außerhalb von public/,
-            # wird die Anfrage abgelehnt (Schutz vor Path Traversal).
-            target = (PUBLIC_DIR / relative).resolve()
-            found = target.is_relative_to(PUBLIC_DIR) and target.is_file()
-        except (OSError, ValueError):
-            found = False
-        if not found:
+        # Nur nachschlagen, nie einen Pfad aus der Anfrage zusammensetzen (siehe _public_files).
+        target = PUBLIC_FILES.get("index.html" if path == "/" else path.lstrip("/"))
+        if target is None or not target.is_file():
             self._send(404, "Nicht gefunden".encode("utf-8"), MIME[".txt"])
             return
         stat = target.stat()
