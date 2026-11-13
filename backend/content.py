@@ -332,6 +332,9 @@ def load_course(directory: Path = CONTENT_DIR / "kurs") -> Course:
 
 # --- Übungsterminal und Glossar ---------------------------------------------
 
+_MISSION_ID = re.compile(r"[a-z0-9-]+")
+_LESSON_ID = re.compile(r"[a-z0-9-]+/[a-z0-9-]+")
+
 
 class Terminal:
     """Dateisystem und Missionen des Übungsterminals.
@@ -340,12 +343,22 @@ class Terminal:
     """
 
     def __init__(self, data: dict):
+        # Kennung, Punkte und Lektionsverweis landen im Browser in Attributen und Adressen.
+        # Deshalb gilt für sie ein festes Format, alles andere bricht Start und Bau ab.
+        for mission in data["missions"]:
+            mission_id = mission.get("id")
+            if not isinstance(mission_id, str) or not _MISSION_ID.fullmatch(mission_id):
+                raise ContentError(f"terminal.json: Ungültige Missions-ID {mission_id!r}, erlaubt sind a-z, 0-9 und Bindestrich.")
+            if type(mission.get("xp")) is not int or mission["xp"] < 0:
+                raise ContentError(f"terminal.json: Mission {mission_id} braucht eine ganze Zahl als xp.")
+            lesson = mission.get("lesson")
+            if lesson is not None and (not isinstance(lesson, str) or not _LESSON_ID.fullmatch(lesson)):
+                raise ContentError(f"terminal.json: Mission {mission_id} hat einen ungültigen Lektionsverweis {lesson!r}.")
+            if not str(mission.get("solution", "")).strip():
+                raise ContentError(f"terminal.json: Mission ohne Lösung: {mission_id}")
         self.missions = {mission["id"]: mission for mission in data["missions"]}
         if len(self.missions) != len(data["missions"]):
             raise ContentError("terminal.json: Zwei Missionen haben dieselbe ID.")
-        for mission in data["missions"]:
-            if not str(mission.get("solution", "")).strip():
-                raise ContentError(f"terminal.json: Mission ohne Lösung: {mission['id']}")
         self.public = {
             "host": data["host"],
             "user": data["user"],
@@ -360,6 +373,14 @@ class Terminal:
 
 def load_terminal(path: Path = CONTENT_DIR / "terminal.json") -> Terminal:
     return Terminal(json.loads(path.read_text(encoding="utf-8")))
+
+
+def check_mission_lessons(course: Course, terminal: Terminal) -> None:
+    """Jede Mission darf nur auf eine Lektion verweisen, die es gibt. Server und statischer Bau prüfen das."""
+    for mission in terminal.missions.values():
+        lesson = mission.get("lesson")
+        if lesson and lesson not in course.by_id:
+            raise ContentError(f"Mission {mission['id']} verweist auf unbekannte Lektion {lesson}")
 
 
 def load_glossary(path: Path = CONTENT_DIR / "glossar.json") -> list[dict]:

@@ -14,6 +14,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -162,6 +163,29 @@ class ContentTests(unittest.TestCase):
             self.assertTrue(page["placeholders"], name)  # eine unausgefüllte Vorlage fällt auf
         self.assertIn("[E-MAIL-ADRESSE]", pages["impressum"]["placeholders"])
         self.assertEqual(content.load_pages(Path(folder) / "gibt-es-nicht"), {})
+
+    def test_mission_fields_are_validated(self):
+        # Kennung, Punkte und Lektionsverweis landen im Browser in Attributen und Adressen: nur feste Formate.
+        base = {"host": "h", "user": "u", "files": {}}
+        good = {"id": "ok-1", "title": "t", "task": "a", "hints": [], "xp": 10, "solution": "x"}
+        content.Terminal({**base, "missions": [good, {**good, "id": "ok-2", "lesson": "modul/lektion"}]})
+        bad_fields = (
+            {"id": 'x"><b>'}, {"id": "Gross"}, {"id": ""}, {"id": 5},
+            {"xp": "10"}, {"xp": True}, {"xp": -1},
+            {"lesson": "nur-ein-teil"}, {"lesson": 'a/b"x'}, {"lesson": 7},
+            {"solution": " "},
+        )
+        for bad in bad_fields:
+            with self.assertRaises(content.ContentError, msg=str(bad)):
+                content.Terminal({**base, "missions": [{**good, **bad}]})
+        with self.assertRaises(content.ContentError):
+            content.Terminal({**base, "missions": [good, good]})  # doppelte Kennung
+        # Verweis auf eine Lektion, die es nicht gibt
+        course = content.load_course()
+        content.check_mission_lessons(course, content.load_terminal())
+        unknown = content.Terminal({**base, "missions": [{**good, "lesson": "gibt/es-nicht"}]})
+        with self.assertRaises(content.ContentError):
+            content.check_mission_lessons(course, unknown)
 
     def test_missions_match_the_filesystem(self):
         terminal = content.load_terminal()
@@ -534,6 +558,14 @@ class StaticBuildTests(unittest.TestCase):
         self.assertNotIn("placeholders", self.data)
         self.assertIn("[DATUM]", self.result["placeholders"]["datenschutz"])  # unausgefüllte Vorlage fällt auf
         self.assertEqual(statisch.collect()["pages"], {})  # ohne Ordner gibt es keine Betreiberseiten
+
+    def test_build_rejects_missions_with_unknown_lessons(self):
+        # Diese Prüfung lief früher nur beim Start des Servers, der Bau hätte den Fehler veröffentlicht.
+        terminal = content.load_terminal()
+        next(iter(terminal.missions.values()))["lesson"] = "gibt/es-nicht"
+        with mock.patch.object(content, "load_terminal", return_value=terminal):
+            with self.assertRaises(content.ContentError):
+                statisch.collect()
 
 
 class UnitTests(unittest.TestCase):

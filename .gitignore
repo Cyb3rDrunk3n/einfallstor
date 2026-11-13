@@ -4,6 +4,12 @@ data/
 # Statische Ausgabe, gebaut von statisch.py
 dist/
 
+# Betreiberseiten und gebaute Daten können persönliche Angaben enthalten.
+# Sie bleiben draußen, egal in welchem Ordner sie liegen. Die Vorlagen heißen *.beispiel.md.
+impressum.md
+datenschutz.md
+daten.json
+
 # Python
 __pycache__/
 *.pyc

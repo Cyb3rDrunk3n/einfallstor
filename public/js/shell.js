@@ -101,9 +101,23 @@ function tokenize(line) {
 }
 
 function globToRegex(pattern, ignoreCase = false) {
-  const source = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  // Mehrere Sterne hintereinander bedeuten dasselbe wie einer, kosten die Suche aber unnötig Zeit.
+  const source = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*+/g, '.*').replace(/\?/g, '.');
   return new RegExp(`^${source}$`, ignoreCase ? 'i' : '');
 }
+
+/**
+ * Suchmuster, an denen sich der Browser festfressen kann: wiederholte Gruppen, Rückbezüge,
+ * Vor- und Rückschau oder sehr viele offene Wiederholungen. grep lehnt sie ab.
+ */
+function tooCostly(pattern) {
+  if (pattern.length > 120) return true;
+  if (/\)[*+?{]|\\[1-9]|\(\?[=!<]/.test(pattern)) return true;
+  return (pattern.match(/[*+]|\{\d+,\}/g) || []).length > 4;
+}
+
+// So lange darf eine Suche über alle Zeilen höchstens dauern (Millisekunden).
+const GREP_BUDGET = 400;
 
 /** Trennt Optionen wie -la von den übrigen Argumenten. */
 function parseFlags(args, allowed) {
@@ -220,8 +234,9 @@ const COMMANDS = {
     run(sh, args) {
       const name = args[0];
       if (!name) return fail('Aufruf: man BEFEHL, zum Beispiel man grep');
-      if (MAN[name]) return ok(['AUFRUF', `  ${MAN[name][0]}`, '', 'BESCHREIBUNG', ...MAN[name].slice(1).map((line) => `  ${line}`)]);
-      if (COMMANDS[name]) return ok([`${name}: ${COMMANDS[name].help}`]);
+      // Object.hasOwn: Namen wie constructor oder toString sind keine Einträge, sondern geerbte Eigenschaften.
+      if (Object.hasOwn(MAN, name)) return ok(['AUFRUF', `  ${MAN[name][0]}`, '', 'BESCHREIBUNG', ...MAN[name].slice(1).map((line) => `  ${line}`)]);
+      if (Object.hasOwn(COMMANDS, name)) return ok([`${name}: ${COMMANDS[name].help}`]);
       return fail(`Kein Handbucheintrag für ${name}`);
     },
   },
@@ -330,6 +345,7 @@ const COMMANDS = {
       if (bad) return fail(`grep: Unbekannte Option -${bad}. Siehe man grep`);
       if (!rest.length) return fail('Aufruf: grep [-i] [-n] [-c] [-v] [-r] MUSTER [DATEI ...]');
       const [pattern, ...targets] = rest;
+      if (tooCostly(pattern)) return fail('grep: Dieses Muster ist der Simulation zu aufwendig. Nimm weniger Wiederholungen und keine wiederholten Gruppen.');
       const mode = flags.has('i') ? 'i' : '';
       let regex;
       try {
@@ -361,14 +377,16 @@ const COMMANDS = {
       }
       const labeled = sources.length > 1 || (flags.has('r') && targets.length > 0);
       const out = [];
+      const started = performance.now();
       for (const { label, lines } of sources) {
         const prefix = labeled ? `${label}:` : '';
         let count = 0;
-        lines.forEach((line, index) => {
-          if (regex.test(line) === flags.has('v')) return;
+        for (const [index, line] of lines.entries()) {
+          if (performance.now() - started > GREP_BUDGET) return fail('grep: Die Suche dauert zu lange. Vereinfache das Muster.');
+          if (regex.test(line) === flags.has('v')) continue;
           count++;
           if (!flags.has('c')) out.push(prefix + (flags.has('n') ? `${index + 1}:` : '') + line);
-        });
+        }
         if (flags.has('c')) out.push(prefix + count);
       }
       return { out, err };
@@ -713,7 +731,7 @@ export class Shell {
         this.reset();
         return { lines: [[['Das Dateisystem ist wieder im Ausgangszustand.', 't-info']]] };
       }
-      const command = COMMANDS[name];
+      const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : null;
       if (!command) {
         errors.push(unknown(name));
         result = { out: [] };

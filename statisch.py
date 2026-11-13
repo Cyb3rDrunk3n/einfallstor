@@ -2,7 +2,10 @@
 """Baut die statische Ausgabe von Einfallstor, zum Beispiel für GitHub Pages.
 
 Aufruf:  python statisch.py                          (Ergebnis im Ordner dist)
-         python statisch.py --ziel webseite --seiten data/seiten
+         python statisch.py --seiten meine-seiten    (mit impressum.md und datenschutz.md aus dem Ordner)
+
+Alles, was im Ergebnis steht, ist nach dem Hochladen öffentlich lesbar, auch der
+Text der Betreiberseiten. Der Ordner dist gehört deshalb nicht ins Repository.
 
 Die statische Ausgabe kommt ohne Server aus. Kurs, Quiz, Übungsterminal und
 Werkzeuge laufen im Browser, der Fortschritt liegt im Speicher des Browsers.
@@ -42,6 +45,7 @@ def collect(pages_dir: Path | None = None) -> dict:
     """Alles, was sonst die API liefert, als ein Datensatz für den Browser."""
     course = content.load_course()
     terminal = content.load_terminal()
+    content.check_mission_lessons(course, terminal)
 
     lessons = {}
     for lesson in course.lessons:

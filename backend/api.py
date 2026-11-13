@@ -60,10 +60,7 @@ class App:
         self.glossary = content.load_glossary()
         self.pages_dir = Path(self.db_path).parent / "seiten"
         self.pages = content.load_pages(self.pages_dir)
-        for mission in self.terminal.missions.values():
-            lesson = mission.get("lesson")
-            if lesson and lesson not in self.course.by_id:
-                raise content.ContentError(f"Mission {mission['id']} verweist auf unbekannte Lektion {lesson}")
+        content.check_mission_lessons(self.course, self.terminal)
         self.stats = course_stats(self.course, self.terminal)
         self.limits = {
             "login": security.RateLimiter(limit=10, window=60),

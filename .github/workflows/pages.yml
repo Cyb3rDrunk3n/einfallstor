@@ -42,6 +42,10 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
+      - name: Tests ausführen
+        # Die Tests sichern Eigenschaften der Ausgabe ab (Richtlinie, Kodierung, keine Lösungswörter).
+        # Schlägt einer fehl, geht dieser Stand nicht online.
+        run: python -m unittest discover -s tests
       - name: Betreiberseiten aus den Variablen schreiben
         env:
           IMPRESSUM: ${{ vars.EINFALLSTOR_IMPRESSUM }}
