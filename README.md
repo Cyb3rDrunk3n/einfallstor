@@ -4,6 +4,8 @@ Pentesting lernen von null: eine Lernplattform für absolute Einsteiger mit Kurs
 
 Das Backend ist reines Python ohne Abhängigkeiten, das Frontend kommt ohne Framework und ohne Build-Schritt aus. Klonen, starten, lernen.
 
+**Direkt ausprobieren:** https://cyb3rdrunk3n.github.io/einfallstor/ (statische Ausgabe ohne Konten, der Fortschritt bleibt im Browser)
+
 ![Startseite von Einfallstor](docs/startseite.jpg)
 
 ## Was drin ist
@@ -188,6 +190,24 @@ Der Ablauf `.github/workflows/pages.yml` baut die Ausgabe bei jedem Push auf `ma
 Danach den Ablauf „Webseite“ unter Actions von Hand starten oder den nächsten Push abwarten. Die Seite liegt dann unter `https://<konto>.github.io/<repository>/`.
 
 Impressum und Datenschutzerklärung stehen in Variablen und nicht im Repository, weil sie zum Betreiber gehören und nicht zum Projekt. Fehlt eine der beiden Seiten oder enthält sie noch Platzhalter, zeigt der Lauf eine Warnung.
+
+### Ohne Einstellungen: der Zweig `gh-pages`
+
+Es geht auch von Hand. Die fertige Ausgabe kommt in einen eigenen Zweig namens `gh-pages`, GitHub liefert dessen Inhalt als Webseite aus. Die Projektseite oben entsteht auf diesem Weg.
+
+```bash
+python statisch.py --seiten meine-seiten
+git worktree add --orphan -b gh-pages ../einfallstor-seite
+cp -r dist/. ../einfallstor-seite/
+touch ../einfallstor-seite/.nojekyll
+git -C ../einfallstor-seite add -A
+git -C ../einfallstor-seite commit -m "Webseite"
+git -C ../einfallstor-seite push origin gh-pages
+```
+
+Die leere Datei `.nojekyll` sagt GitHub, dass es die Dateien unverändert ausliefern soll. Beim ersten Hochladen hat GitHub die Seite von selbst eingeschaltet. Geschieht das nicht, unter Settings, Pages als Quelle den Zweig `gh-pages` wählen. Für einen neuen Stand den Ordner mit `git worktree add ../einfallstor-seite gh-pages` wieder anlegen, den Inhalt ersetzen und erneut hochladen.
+
+In den Zweig gehört nur, was öffentlich sein darf: Alles darin ist für jeden lesbar, auch der Text der Betreiberseiten.
 
 ## Rechtlicher Hinweis
 
