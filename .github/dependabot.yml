@@ -1,0 +1,8 @@
+# Die Abläufe unter .github/workflows legen jede Aktion auf einen festen Commit.
+# Dependabot schlägt einmal pro Woche neuere Stände als Pull Request vor.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

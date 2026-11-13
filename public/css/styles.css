@@ -98,6 +98,7 @@ code, pre, kbd { font-family: var(--mono); }
 .skip-link:focus { top: 1rem; }
 
 .noscript { padding: 5rem 0; }
+.framed { margin: 0; padding: 2rem; text-align: center; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes blink { 50% { opacity: 0; } }
@@ -234,6 +235,13 @@ tr:last-child td { border-bottom: 0; }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 .load-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; opacity: 0; transition: opacity .2s ease; }
 .load-bar::after { content: ""; display: block; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+/* Hinweisleiste der statischen Ausgabe (statisch.py) */
+.notice { position: relative; z-index: 1; border-bottom: 1px solid var(--line); background: rgba(61, 255, 162, .05); }
+.notice-inner { display: flex; align-items: flex-start; gap: .7rem; padding-block: .6rem; color: var(--muted); font-size: .88rem; }
+.notice-inner > .icon { margin-top: .12rem; color: var(--accent); }
+.notice-inner p { flex: 1; }
+.notice-close { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-radius: 8px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+.notice-close:hover { color: var(--text); border-color: var(--line-strong); }
 .is-loading .load-bar { opacity: 1; }
 .is-loading .load-bar::after { animation: sweep 1s linear infinite; }
 
@@ -560,8 +568,10 @@ pre.code:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
 .progress-row span:last-child { text-align: right; font: 600 .82rem var(--mono); color: var(--muted); }
 .danger { border-color: rgba(255, 107, 129, .3); }
 .danger p { color: var(--muted); margin-bottom: 1rem; max-width: 70ch; }
-.danger form { display: flex; flex-wrap: wrap; gap: .7rem; max-width: 520px; }
-.danger .input { flex: 1; min-width: 200px; }
+.danger form, .name-form { display: flex; flex-wrap: wrap; gap: .7rem; max-width: 520px; }
+.danger .input, .name-form .input { flex: 1; min-width: 200px; }
+.danger .check { flex: 1 1 100%; margin: 0; }
+.name-form { margin-top: .9rem; }
 .row-actions { display: flex; flex-wrap: wrap; gap: .7rem; }
 
 .cert { position: relative; padding: clamp(1.6rem, 4vw, 2.8rem); text-align: center; border-radius: 22px; border: 1px solid rgba(61, 255, 162, .45); background: radial-gradient(600px 240px at 50% 0%, rgba(61, 255, 162, .14), transparent 70%), var(--panel-solid); margin-bottom: 1.2rem; }
@@ -658,7 +668,7 @@ pre.code:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
 
 @media print {
   body { background: #fff; color: #111; }
-  body::before, #netz, .nav, .footer, .toasts { display: none !important; }
+  body::before, #netz, .nav, .notice, .footer, .toasts { display: none !important; }
   body.print-cert main .wrap > *:not(.cert) { display: none !important; }
   .cert { border: 2px solid #111; background: #fff; }
   .cert h2, .cert p, .cert small, .cert .kicker { color: #111; }

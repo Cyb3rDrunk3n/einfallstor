@@ -4,6 +4,8 @@ Pentesting lernen von null: eine Lernplattform für absolute Einsteiger mit Kurs
 
 Das Backend ist reines Python ohne Abhängigkeiten, das Frontend kommt ohne Framework und ohne Build-Schritt aus. Klonen, starten, lernen.
 
+**Direkt ausprobieren:** https://cyb3rdrunk3n.github.io/einfallstor/ (statische Ausgabe ohne Konten, der Fortschritt bleibt im Browser)
+
 ![Startseite von Einfallstor](docs/startseite.jpg)
 
 ## Was drin ist
@@ -62,6 +64,7 @@ Die Seite läuft danach unter http://localhost:1337. Unter Windows genügt ein D
 ```
 einfallstor/
 ├── server.py            HTTP-Server, Auslieferung der Dateien, Sicherheits-Header
+├── statisch.py          baut die statische Ausgabe, zum Beispiel für GitHub Pages
 ├── backend/
 │   ├── api.py           alle Endpunkte und die Routentabelle
 │   ├── content.py       lädt Kurs, Terminal und Glossar, rendert Markdown
@@ -112,7 +115,7 @@ Nach einer Änderung den Server neu starten. Formfehler meldet er beim Start, di
 python -m unittest discover -s tests -v
 ```
 
-Die Tests starten für jede Testklasse einen eigenen Server mit leerer Datenbank und prüfen Inhalte, Anmeldung, Quiz, Missionen und die Schutzmaßnahmen.
+Die Tests starten für jede Testklasse einen eigenen Server mit leerer Datenbank und prüfen Inhalte, Anmeldung, Quiz, Missionen, die Schutzmaßnahmen und die statische Ausgabe.
 
 ## Sicherheit
 
@@ -139,13 +142,54 @@ Wer die Plattform öffentlich betreibt, braucht in Deutschland in aller Regel ei
 
 Vorlagen liegen in `content/rechtliches/`. Kopiere sie an die genannten Stellen, ersetze die Platzhalter in eckigen Klammern und starte den Server neu. Danach erscheinen die Links in der Fußzeile, und das Formular zum Anlegen eines Kontos verweist auf die Datenschutzerklärung. Solange Platzhalter übrig sind, meldet der Server das beim Start.
 
-Die Vorlage zur Datenschutzerklärung beschreibt, was die Anwendung verarbeitet: Serverprotokoll, Konto, Rangliste und das Sitzungs-Cookie. Die Angaben zum Hosting, zur Aufbewahrung der Protokolle und zur Aufsichtsbehörde müssen zum eigenen Betrieb passen. Die Vorlagen sind ein Ausgangspunkt und keine Rechtsberatung.
+Die Vorlage zur Datenschutzerklärung beschreibt, was die Anwendung verarbeitet: Serverprotokoll, Konto, Rangliste und das Sitzungs-Cookie. Die Angaben zum Hosting, zur Aufbewahrung der Protokolle und zur Aufsichtsbehörde müssen zum eigenen Betrieb passen. Für die statische Ausgabe gibt es eine eigene Vorlage, `datenschutz-statisch.beispiel.md`. Sie beschreibt GitHub Pages als Hosting und den Speicher des Browsers. Die Vorlagen sind ein Ausgangspunkt und keine Rechtsberatung.
 
 ## Öffentlich betreiben
 
 Im Ordner [deploy](deploy/README.md) liegt ein Einrichtungspaket für einen Debian-Server: Firewall, SSH nur mit Schlüssel, automatische Updates, ein abgeschotteter systemd-Dienst und Caddy als HTTPS-Proxy. Das Paket ist in einer virtuellen Maschine mit Debian 13 getestet. Der Betrieb mit einer echten Domain und einem Zertifikat von Let's Encrypt ist noch nicht erprobt.
 
-Eine Sicherheitslücke gefunden? Bitte als Issue melden oder über die Funktion „Report a vulnerability“ des Repositorys.
+Eine Sicherheitslücke gefunden? Bitte vertraulich über die Funktion „Report a vulnerability“ des Repositorys melden, Näheres steht in [SECURITY.md](SECURITY.md).
+
+Die Abläufe unter `.github/workflows/` legen jede Aktion auf einen festen Commit und arbeiten mit einem Zugriffstoken, das nur lesen darf. Dependabot schlägt neuere Stände der Aktionen als Pull Request vor.
+
+## Statische Ausgabe für GitHub Pages
+
+Für eine Webseite ohne eigenen Server gibt es eine statische Ausgabe. Kurs, Quiz, Übungsterminal, Werkzeuge und Glossar laufen dabei vollständig im Browser. Der Fortschritt liegt im Speicher des Browsers (`localStorage`).
+
+```bash
+python statisch.py
+```
+
+Das Ergebnis steht im Ordner `dist` und lässt sich bei jedem Anbieter für statische Seiten ablegen. Zum Ansehen auf dem eigenen Rechner:
+
+```bash
+python -m http.server 8000 --directory dist
+```
+
+| Option | Wirkung | Standard |
+|---|---|---|
+| `--ziel` | Zielordner | `dist` |
+| `--seiten` | Ordner mit `impressum.md` und `datenschutz.md` des Betreibers | ohne Betreiberseiten |
+
+Was der statischen Ausgabe fehlt:
+
+- Es gibt keine Konten und keine Rangliste. Der Fortschritt bleibt in dem Browser, in dem er entstanden ist.
+- Der Browser prüft das Quiz selbst. Die Lösungen stehen deshalb in der Datei `daten.json` und lassen sich dort nachlesen. Von den Missionen stehen dort nur die Prüfsummen der Lösungswörter.
+- GitHub Pages sendet keine eigenen Sicherheits-Header. Die Content Security Policy steht deshalb als `meta`-Element in der Seite. Sie verbietet alles und erlaubt nur eigene Skripte, Stile, Bilder und das Laden der Kursdaten. Header wie `X-Frame-Options` entfallen. Als Ersatz prüft die Anwendung beim Start, ob sie in einem Frame läuft, und startet dann nicht.
+
+Der Fortschritt im Speicher des Browsers gilt als fremde Eingabe: Beim Lesen übernimmt die Seite nur Werte der erwarteten Form, und jede Ausgabe läuft durch die Escape-Funktion.
+
+### Auf GitHub Pages veröffentlichen
+
+Der Ablauf `.github/workflows/pages.yml` baut die Ausgabe bei jedem Push auf `main` und stellt sie bereit. Er bleibt ausgeschaltet, bis diese drei Einstellungen im Repository gesetzt sind:
+
+1. Unter Settings, Pages, Build and deployment als Source „GitHub Actions“ wählen.
+2. Unter Settings, Secrets and variables, Actions, Variables zwei Variablen anlegen: `EINFALLSTOR_IMPRESSUM` mit dem ausgefüllten Text aus `content/rechtliches/impressum.beispiel.md` und `EINFALLSTOR_DATENSCHUTZ` mit dem ausgefüllten Text aus `content/rechtliches/datenschutz-statisch.beispiel.md`.
+3. Am selben Ort die Variable `EINFALLSTOR_PAGES` mit dem Wert `ja` anlegen.
+
+Danach den Ablauf „Webseite“ unter Actions von Hand starten oder den nächsten Push abwarten. Die Seite liegt dann unter `https://<konto>.github.io/<repository>/`.
+
+Impressum und Datenschutzerklärung stehen in Variablen und nicht im Repository, weil sie zum Betreiber gehören und nicht zum Projekt. Fehlt eine der beiden Seiten oder enthält sie noch Platzhalter, zeigt der Lauf eine Warnung.
 
 ## Rechtlicher Hinweis
 

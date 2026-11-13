@@ -1,6 +1,9 @@
 # Laufzeitdaten: SQLite-Datenbank mit Konten und Fortschritt
 data/
 
+# Statische Ausgabe, gebaut von statisch.py
+dist/
+
 # Python
 __pycache__/
 *.pyc

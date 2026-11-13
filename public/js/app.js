@@ -5,7 +5,7 @@
 //   mount(root, data, params) baut die Seite auf und gibt bei Bedarf eine Aufräumfunktion zurück
 //   title(data)               optional, Seitentitel
 
-import { $, $$, esc, icon, loadMe, store } from './lib.js';
+import { $, $$, REPO_URL, esc, icon, isStatic, loadMe, store } from './lib.js';
 import { startNetwork } from './fx.js';
 import * as glossar from './views/glossar.js';
 import * as konto from './views/konto.js';
@@ -25,10 +25,13 @@ const ROUTES = [
   { pattern: /^\/terminal$/, view: terminal, nav: 'terminal', title: 'Übungsterminal' },
   { pattern: /^\/werkzeuge$/, view: werkzeuge, nav: 'werkzeuge', title: 'Werkzeuge' },
   { pattern: /^\/glossar$/, view: glossar, nav: 'glossar', title: 'Glossar' },
-  { pattern: /^\/rangliste$/, view: rangliste, nav: 'rangliste', title: 'Rangliste' },
   { pattern: /^\/profil$/, view: profil, nav: 'profil', title: 'Profil' },
-  { pattern: /^\/anmelden$/, view: konto.login, nav: 'konto', title: 'Anmelden' },
-  { pattern: /^\/registrieren$/, view: konto.register, nav: 'konto', title: 'Konto erstellen' },
+  // Konten und Rangliste gibt es nur mit Server. In der statischen Ausgabe enden diese Adressen auf der 404-Seite.
+  ...(isStatic ? [] : [
+    { pattern: /^\/rangliste$/, view: rangliste, nav: 'rangliste', title: 'Rangliste' },
+    { pattern: /^\/anmelden$/, view: konto.login, nav: 'konto', title: 'Anmelden' },
+    { pattern: /^\/registrieren$/, view: konto.register, nav: 'konto', title: 'Konto erstellen' },
+  ]),
   { pattern: /^\/sicherheit$/, view: seiten.sicherheit, nav: 'seite', title: 'Sicherheitskonzept' },
   { pattern: /^\/kodex$/, view: seiten.kodex, nav: 'seite', title: 'Kodex' },
   { pattern: /^\/(impressum|datenschutz)$/, view: seiten.rechtliches, nav: 'seite', title: 'Rechtliches' },
@@ -56,6 +59,32 @@ function renderUser() {
     ? `<a class="chip-user" href="#/profil" title="Zum Profil">${icon('user')}<span>${esc(me.name)}</span><b>${me.xp} XP</b></a>`
     : `<a class="btn btn-ghost btn-sm" href="#/anmelden">Anmelden</a>
        <a class="btn btn-primary btn-sm" href="#/registrieren">Konto erstellen</a>`;
+}
+
+/** Hinweisleiste der statischen Ausgabe. Wer sie schließt, sieht sie in diesem Browser nicht wieder. */
+function showNotice() {
+  const key = 'einfallstor.hinweis';
+  const notice = $('#notice');
+  try {
+    if (localStorage.getItem(key)) return;
+  } catch {
+    // gesperrter Speicher: Die Leiste erscheint dann bei jedem Besuch
+  }
+  notice.innerHTML = `
+    <div class="wrap notice-inner">
+      ${icon('info')}
+      <p>Du nutzt die Ausgabe ohne Server. Dein Fortschritt bleibt in diesem Browser. Wo der Kurs von Anmeldung, Konto oder Cookie dieser Plattform spricht, ist die <a href="${REPO_URL}" rel="noopener">Fassung mit Server</a> gemeint.</p>
+      <button class="notice-close" type="button" aria-label="Hinweis schließen">${icon('x')}</button>
+    </div>`;
+  notice.hidden = false;
+  $('button', notice).addEventListener('click', () => {
+    notice.hidden = true;
+    try {
+      localStorage.setItem(key, '1');
+    } catch {
+      // dann eben nur bis zum Neuladen
+    }
+  });
 }
 
 function errorPage(message) {
@@ -124,6 +153,12 @@ async function navigate() {
 }
 
 async function boot() {
+  // Schutz vor Clickjacking: In einem Frame startet die Anwendung nicht. Mit Server verbietet schon
+  // die Kopfzeile X-Frame-Options die Einbettung, GitHub Pages kann solche Kopfzeilen nicht senden.
+  if (window.top !== window.self) {
+    document.body.innerHTML = `<p class="framed">Einfallstor lässt sich nicht in andere Seiten einbetten. <a href="${esc(location.href)}" target="_top" rel="noopener">Seite direkt öffnen</a></p>`;
+    return;
+  }
   startNetwork($('#netz'));
   document.addEventListener('me', renderUser);
   toggle.addEventListener('click', () => setMenu(!menu.classList.contains('open')));
@@ -141,8 +176,12 @@ async function boot() {
     await loadMe();
   } catch (error) {
     renderUser();
-    main.innerHTML = errorPage(`${error.message} Läuft der Server noch?`);
+    main.innerHTML = errorPage(isStatic ? error.message : `${error.message} Läuft der Server noch?`);
     return;
+  }
+  if (isStatic) {
+    $('[data-nav="rangliste"]').remove();
+    showNotice();
   }
   for (const [name, label] of Object.entries(LEGAL_LINKS)) {
     if (store.pages.includes(name)) $('.footer-links').insertAdjacentHTML('beforeend', `<a href="#/${name}">${label}</a>`);

@@ -22,8 +22,17 @@ export class ApiError extends Error {
   }
 }
 
+export const REPO_URL = 'https://github.com/Cyb3rDrunk3n/einfallstor';
+
+/** Statische Ausgabe (statisch.py): Es gibt keinen Server, js/statisch.js beantwortet alle Anfragen im Browser. */
+export const isStatic = document.querySelector('meta[name="einfallstor-modus"]')?.content === 'statisch';
+
 /** GET ohne body, POST mit body. Wirft ApiError mit der Meldung des Servers. */
 export async function api(path, body) {
+  if (isStatic) {
+    const { handle } = await import('./statisch.js');
+    return handle(path, body);
+  }
   const options = { credentials: 'same-origin' };
   if (body !== undefined) {
     options.method = 'POST';

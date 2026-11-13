@@ -1,0 +1,73 @@
+name: Webseite
+
+# Baut die statische Ausgabe und stellt sie auf GitHub Pages bereit.
+#
+# Der Ablauf ist ausgeschaltet, bis der Betreiber ihn einschaltet. Dazu gehören
+# drei Schritte, alle in den Einstellungen des Repositorys:
+#   1. Pages -> Build and deployment -> Source: "GitHub Actions"
+#   2. Secrets and variables -> Actions -> Variables:
+#        EINFALLSTOR_IMPRESSUM    ausgefüllter Text aus content/rechtliches/impressum.beispiel.md
+#        EINFALLSTOR_DATENSCHUTZ  ausgefüllter Text aus content/rechtliches/datenschutz-statisch.beispiel.md
+#   3. ebenfalls unter Variables: EINFALLSTOR_PAGES = ja
+#
+# Impressum und Datenschutzerklärung stehen in Variablen und nicht im Repository,
+# weil sie zum Betreiber gehören und nicht zum Projekt. Wer das Projekt kopiert,
+# bekommt sie nicht mit.
+#
+# Absicherung des Ablaufs: Jede Aktion ist auf einen festen Commit gelegt, damit
+# ein später verschobenes Versionsetikett keinen fremden Code einschleust
+# (Dependabot hält die Stände aktuell). Das Zugriffstoken darf nur lesen, erst
+# der zweite Auftrag bekommt das Recht, Pages zu beschreiben.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bauen:
+    if: vars.EINFALLSTOR_PAGES == 'ja'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Betreiberseiten aus den Variablen schreiben
+        env:
+          IMPRESSUM: ${{ vars.EINFALLSTOR_IMPRESSUM }}
+          DATENSCHUTZ: ${{ vars.EINFALLSTOR_DATENSCHUTZ }}
+        run: |
+          mkdir seiten
+          if [ -n "$IMPRESSUM" ]; then printf '%s\n' "$IMPRESSUM" > seiten/impressum.md; fi
+          if [ -n "$DATENSCHUTZ" ]; then printf '%s\n' "$DATENSCHUTZ" > seiten/datenschutz.md; fi
+      - name: Statische Ausgabe bauen
+        # Hinweise des Bauskripts (fehlende Seite, offener Platzhalter) erscheinen als Warnung am Lauf.
+        # "shell: bash" schaltet pipefail ein, damit ein Fehler im Bauskript den Lauf abbricht.
+        shell: bash
+        run: python statisch.py --ziel dist --seiten seiten | sed 's/^Hinweis:/::warning::/'
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist
+
+  bereitstellen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,6 +1,6 @@
 // Profil: Stand, Abzeichen, Teilnahmebescheinigung, Konto löschen
 
-import { $, api, applyVars, esc, formatNumber, icon, loadCourse, loadMe, percent, setMe, store, toast } from '../lib.js';
+import { $, api, applyVars, esc, formatNumber, icon, isStatic, loadCourse, loadMe, percent, setMe, store, toast } from '../lib.js';
 
 export async function load() {
   const [modules] = await Promise.all([loadCourse(), loadMe()]);
@@ -24,6 +24,36 @@ function certificate(me, modules, lessonCount) {
       <div class="cert-actions"><button class="btn btn-primary" id="print-cert" type="button">${icon('drucker')} Drucken</button></div>
     </section>`;
 }
+
+// Unterer Teil des Profils. Mit Server: Konto löschen. Ohne Server: Name für die Bescheinigung und Fortschritt löschen.
+const ACCOUNT_PANEL = `
+      <section class="panel card danger">
+        <h2>Konto löschen</h2>
+        <p>Das Konto wird mit allen Punkten und dem gesamten Fortschritt sofort und endgültig entfernt. Zur Bestätigung gib dein Passwort ein.</p>
+        <form id="delete-form">
+          <input class="input" type="password" name="password" autocomplete="current-password" maxlength="128" placeholder="Passwort" aria-label="Passwort zur Bestätigung" required>
+          <button class="btn btn-danger" type="submit">Konto endgültig löschen</button>
+        </form>
+      </section>`;
+
+const localPanels = (me) => `
+      <section class="panel card">
+        <h2>Dein Name</h2>
+        <p class="hint">Der Name steht auf der Teilnahmebescheinigung. Er wird nur in diesem Browser gespeichert.</p>
+        <form class="name-form" id="name-form">
+          <input class="input" type="text" name="name" maxlength="30" autocomplete="off" value="${esc(me.name)}" aria-label="Name" required>
+          <button class="btn btn-ghost" type="submit">Speichern</button>
+        </form>
+      </section>
+
+      <section class="panel card danger">
+        <h2>Fortschritt löschen</h2>
+        <p>Punkte, Abzeichen und der Name liegen nur im Speicher dieses Browsers. Beim Löschen werden sie sofort und endgültig entfernt.</p>
+        <form id="delete-form">
+          <label class="check"><input type="checkbox" name="sure" required> Ja, meinen Fortschritt in diesem Browser löschen</label>
+          <button class="btn btn-danger" type="submit">Fortschritt endgültig löschen</button>
+        </form>
+      </section>`;
 
 export function mount(root, modules) {
   const me = store.me;
@@ -59,7 +89,7 @@ export function mount(root, modules) {
           </div>
           <div class="bar" data-p="${levelProgress}"><i></i></div>
         </div>
-        <button class="btn btn-ghost" id="logout" type="button">${icon('logout')} Abmelden</button>
+        ${isStatic ? '' : `<button class="btn btn-ghost" id="logout" type="button">${icon('logout')} Abmelden</button>`}
       </div>
 
       <div class="tiles">
@@ -97,18 +127,11 @@ export function mount(root, modules) {
         ${me.completedAt ? '' : `<p class="cert-actions"><a class="btn btn-primary" href="#/kurs">Weiterlernen ${icon('arrowRight')}</a></p>`}
       </section>
 
-      <section class="panel card danger">
-        <h2>Konto löschen</h2>
-        <p>Das Konto wird mit allen Punkten und dem gesamten Fortschritt sofort und endgültig entfernt. Zur Bestätigung gib dein Passwort ein.</p>
-        <form id="delete-form">
-          <input class="input" type="password" name="password" autocomplete="current-password" maxlength="128" placeholder="Passwort" aria-label="Passwort zur Bestätigung" required>
-          <button class="btn btn-danger" type="submit">Konto endgültig löschen</button>
-        </form>
-      </section>
+      ${isStatic ? localPanels(me) : ACCOUNT_PANEL}
     </section>`;
   applyVars(root);
 
-  $('#logout', root).addEventListener('click', async () => {
+  $('#logout', root)?.addEventListener('click', async () => {
     try {
       await api('/logout', {});
       setMe(null);
@@ -119,14 +142,31 @@ export function mount(root, modules) {
     }
   });
 
+  $('#name-form', root)?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const { user } = await api('/profile/name', { name: new FormData(event.target).get('name') });
+      setMe(user);
+      toast('Name gespeichert', 'ok');
+      mount(root, modules);
+    } catch (error) {
+      toast(error.message, 'error');
+    }
+  });
+
   $('#delete-form', root).addEventListener('submit', async (event) => {
     event.preventDefault();
     const password = new FormData(event.target).get('password');
-    if (!password) return;
+    if (!isStatic && !password) return;
     try {
       await api('/account/delete', { password });
-      setMe(null);
-      toast('Das Konto wurde gelöscht.', 'ok');
+      if (isStatic) {
+        await loadMe(); // leeres lokales Profil
+        toast('Der Fortschritt wurde gelöscht.', 'ok');
+      } else {
+        setMe(null);
+        toast('Das Konto wurde gelöscht.', 'ok');
+      }
       location.hash = '#/';
     } catch (error) {
       toast(error.message, 'error');

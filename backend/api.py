@@ -31,6 +31,24 @@ class ApiError(Exception):
         self.message = message
 
 
+def course_stats(course: content.Course, terminal: content.Terminal) -> dict:
+    """Kennzahlen für Startseite und Profil. Auch die statische Ausgabe nutzt sie."""
+    return {
+        "modules": len(course.modules),
+        "lessons": len(course.lessons),
+        "questions": sum(len(lesson["quiz"]) for lesson in course.lessons),
+        "missions": len(terminal.missions),
+        "minutes": sum(lesson["minutes"] for lesson in course.lessons),
+        "xp": sum(lesson["xp"] for lesson in course.lessons)
+        + sum(mission["xp"] for mission in terminal.missions.values()),
+    }
+
+
+def normalize_answer(answer: str) -> str:
+    """Vergleichsform eines Lösungsworts: ohne Randleerzeichen, Groß- und Kleinschreibung egal."""
+    return " ".join(answer.split()).casefold()
+
+
 class App:
     """Alles, was der Server zur Laufzeit braucht: Inhalte, Datenbank, Begrenzer."""
 
@@ -46,15 +64,7 @@ class App:
             lesson = mission.get("lesson")
             if lesson and lesson not in self.course.by_id:
                 raise content.ContentError(f"Mission {mission['id']} verweist auf unbekannte Lektion {lesson}")
-        self.stats = {
-            "modules": len(self.course.modules),
-            "lessons": len(self.course.lessons),
-            "questions": sum(len(lesson["quiz"]) for lesson in self.course.lessons),
-            "missions": len(self.terminal.missions),
-            "minutes": sum(lesson["minutes"] for lesson in self.course.lessons),
-            "xp": sum(lesson["xp"] for lesson in self.course.lessons)
-            + sum(mission["xp"] for mission in self.terminal.missions.values()),
-        }
+        self.stats = course_stats(self.course, self.terminal)
         self.limits = {
             "login": security.RateLimiter(limit=10, window=60),
             "register": security.RateLimiter(limit=10, window=600),
@@ -175,10 +185,6 @@ def _lesson(req: Request) -> dict:
     return lesson
 
 
-def _normalize(answer: str) -> str:
-    return " ".join(answer.split()).casefold()
-
-
 # --- Endpunkte ----------------------------------------------------------------
 
 
@@ -247,7 +253,7 @@ def post_mission(req: Request):
     answer = req.body.get("answer")
     if not isinstance(answer, str) or not answer.strip() or len(answer) > 200:
         raise ApiError(400, "Bitte gib ein Lösungswort ein.")
-    correct = hmac.compare_digest(_normalize(answer).encode(), _normalize(mission["solution"]).encode())
+    correct = hmac.compare_digest(normalize_answer(answer).encode(), normalize_answer(mission["solution"]).encode())
     awarded = _award(req, "mission", mission["id"], mission["xp"]) if correct else 0
     return 200, {"correct": correct, "xpAwarded": awarded, "saved": correct and req.user is not None}
 

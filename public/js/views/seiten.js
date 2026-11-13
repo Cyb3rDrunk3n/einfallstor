@@ -1,6 +1,6 @@
 // Feste Seiten: Sicherheitskonzept, Kodex, Fehlerseite
 
-import { api, esc, icon, loadCourse } from '../lib.js';
+import { api, esc, icon, isStatic, loadCourse } from '../lib.js';
 
 const MEASURES = [
   {
@@ -92,6 +92,7 @@ export const sicherheit = {
         <span class="kicker">Sicherheitskonzept</span>
         <h1>So ist diese Plattform gebaut</h1>
         <p class="lead">Eine Seite über IT-Sicherheit sollte ihre eigenen Regeln einhalten. Hier steht, welche Maßnahmen umgesetzt sind, wo du sie im Quelltext findest und welche Lektion den Hintergrund erklärt.</p>
+        ${isStatic ? '<p class="hint">Du siehst die statische Ausgabe ohne Server. Die Maßnahmen beschreiben die vollständige Plattform, wie sie mit server.py läuft. Hier prüft der Browser das Quiz selbst, die Lösungen stehen deshalb in der Datei daten.json.</p>' : ''}
       </section>
       <section class="wrap measures">
         ${MEASURES.map((measure) => `

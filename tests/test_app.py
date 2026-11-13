@@ -5,6 +5,7 @@ Aufruf im Projektordner:  python -m unittest discover -s tests -v
 Jede Testklasse startet einen eigenen Server auf einem freien Port mit einer
 leeren Datenbank in einem temporären Ordner.
 """
+import hashlib
 import http.client
 import json
 import shutil
@@ -17,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import server  # noqa: E402
+import statisch  # noqa: E402
 from backend import api, content  # noqa: E402
 
 server.Handler.log_message = lambda *args: None  # Zugriffsprotokoll im Test stumm schalten
@@ -464,6 +466,74 @@ class PageTests(ServerCase):
         self.assertIn("[E-MAIL-ADRESSE]", public[0])  # offener Platzhalter im Impressum
         self.assertIn("datenschutz.md", public[1])  # fehlende Datenschutzerklärung
         self.assertEqual(len(self.app.page_notes(public=False)), 1)  # lokal stört eine fehlende Seite nicht
+
+
+class StaticBuildTests(unittest.TestCase):
+    """Die statische Ausgabe (statisch.py) ersetzt den Server durch daten.json und public/js/statisch.js."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = Path(tempfile.mkdtemp(prefix="einfallstor-statisch-"))
+        pages = cls.tmp / "seiten"
+        pages.mkdir()
+        rechtliches = content.CONTENT_DIR / "rechtliches"
+        shutil.copy(rechtliches / "impressum.beispiel.md", pages / "impressum.md")
+        shutil.copy(rechtliches / "datenschutz-statisch.beispiel.md", pages / "datenschutz.md")
+        cls.target = cls.tmp / "dist"
+        cls.result = statisch.build(cls.target, pages)
+        cls.data = json.loads((cls.target / "daten.json").read_text(encoding="utf-8"))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_data_matches_the_api(self):
+        course, terminal = content.load_course(), content.load_terminal()
+        self.assertEqual(self.data["stats"], api.course_stats(course, terminal))
+        self.assertEqual(self.data["course"], course.outline)
+        self.assertEqual(set(self.data["lessons"]), set(course.by_id))
+        self.assertEqual(self.data["levels"], [list(level) for level in api.LEVELS])
+        self.assertEqual(len(self.data["glossary"]), len(content.load_glossary()))
+        for lesson in self.data["lessons"].values():
+            for question in lesson["quiz"]:  # ohne Server prüft der Browser, er braucht Lösung und Erklärung
+                self.assertIn(question["answer"], range(len(question["options"])))
+                self.assertTrue(question["explanation"])
+
+    def test_missions_carry_a_checksum_instead_of_the_solution(self):
+        solutions = content.load_terminal().missions
+        self.assertEqual(len(self.data["terminal"]["missions"]), len(solutions))
+        for mission in self.data["terminal"]["missions"]:
+            self.assertNotIn("solution", mission)
+            solution = solutions[mission["id"]]["solution"]
+            # statisch.js vereinheitlicht mit toLowerCase. Bei reinem ASCII ergibt das dasselbe wie casefold.
+            self.assertTrue(solution.isascii(), mission["id"])
+            expected = hashlib.sha256(" ".join(solution.split()).lower().encode()).hexdigest()
+            self.assertEqual(mission["hash"], expected, mission["id"])
+        raw = (self.target / "daten.json").read_text(encoding="utf-8")
+        self.assertNotIn('"solution"', raw)
+
+    def test_index_runs_without_a_server(self):
+        html = (self.target / "index.html").read_text(encoding="utf-8")
+        self.assertIn('<meta name="einfallstor-modus" content="statisch">', html)
+        # Pages sendet keine eigenen Kopfzeilen: Die Richtlinie steht in der Seite, verbietet alles und erlaubt nur Eigenes.
+        self.assertIn("Content-Security-Policy", html)
+        self.assertIn("default-src 'none'", html)
+        self.assertIn("script-src 'self'", html)
+        self.assertIn("form-action 'none'", html)
+        self.assertNotIn("unsafe", html)
+        self.assertIn('<meta name="referrer" content="no-referrer">', html)
+        # GitHub Pages liegt in einem Unterordner: Pfade, die mit / beginnen, zeigen dort ins Leere.
+        self.assertNotRegex(html, r'(?:href|src)="/')
+        self.assertTrue((self.target / "js" / "statisch.js").is_file())
+        source = (statisch.PUBLIC_DIR / "index.html").read_text(encoding="utf-8")
+        self.assertNotIn("einfallstor-modus", source)  # die Fassung mit Server bleibt unverändert
+
+    def test_operator_pages_are_included(self):
+        self.assertEqual(set(self.data["pages"]), set(content.PAGES))
+        self.assertIn("GitHub Pages", self.data["pages"]["datenschutz"]["html"])
+        self.assertNotIn("placeholders", self.data)
+        self.assertIn("[DATUM]", self.result["placeholders"]["datenschutz"])  # unausgefüllte Vorlage fällt auf
+        self.assertEqual(statisch.collect()["pages"], {})  # ohne Ordner gibt es keine Betreiberseiten
 
 
 class UnitTests(unittest.TestCase):

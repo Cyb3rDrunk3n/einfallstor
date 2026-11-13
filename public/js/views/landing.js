@@ -1,11 +1,13 @@
 // Startseite
 
-import { $, $$, doneLessons, esc, icon, loadCourse, store } from '../lib.js';
+import { $, $$, REPO_URL, doneLessons, esc, icon, isStatic, loadCourse, store } from '../lib.js';
 import { countUp, observeReveal, typeLines } from '../fx.js';
 
 const FEATURES = [
   ['book', 'Lesen', 'Kurze Lektionen, die bei null anfangen. Jeder Fachbegriff wird erklärt, wenn er zum ersten Mal vorkommt.'],
-  ['quiz', 'Prüfen', 'Zu jeder Lektion gehört ein Quiz. Ausgewertet wird auf dem Server, Punkte gibt es erst, wenn alles stimmt.'],
+  ['quiz', 'Prüfen', isStatic
+    ? 'Zu jeder Lektion gehört ein Quiz. Punkte gibt es erst, wenn alle Antworten stimmen.'
+    : 'Zu jeder Lektion gehört ein Quiz. Ausgewertet wird auf dem Server, Punkte gibt es erst, wenn alles stimmt.'],
   ['terminal', 'Ausprobieren', 'Das Übungsterminal simuliert eine Linux-Shell. Missionen üben das Handwerk, kaputt gehen kann nichts.'],
   ['trophy', 'Dranbleiben', 'Punkte, Ränge und Abzeichen zeigen deinen Stand. Am Ende wartet eine Teilnahmebescheinigung.'],
 ];
@@ -23,6 +25,65 @@ const HEADERS = [
   ['Referrer-Policy', 'no-referrer'],
   ['Set-Cookie', 'sid=…; HttpOnly; SameSite=Strict'],
 ];
+
+const POINTS = isStatic
+  ? ['Keine Vorkenntnisse nötig', 'Ohne Konto und ohne Anmeldung', 'Fortschritt bleibt in deinem Browser']
+  : ['Keine Vorkenntnisse nötig', 'Konto ohne E-Mail-Adresse', 'Läuft auf deinem eigenen Rechner'];
+
+const TICKS = [
+  'Backend in Python, nur Standardbibliothek',
+  'Passwörter mit scrypt und Salt gespeichert',
+  'Sitzungs-Cookie mit HttpOnly und SameSite',
+  'Content Security Policy ohne Ausnahmen',
+];
+
+const ticks = () => `<ul class="ticks">${TICKS.map((text) => `<li>${icon('check')} ${text}</li>`).join('')}</ul>`;
+const termBar = (title) => `
+  <div class="term-bar">
+    <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    <span class="term-title">${title}</span>
+  </div>`;
+
+/** Abschnitt „Unter der Haube“. Mit Server zeigt er dessen Antwort, ohne Server den Weg zur vollständigen Plattform. */
+function hood() {
+  if (isStatic) {
+    return `
+      <div class="term reveal">
+        ${termBar('Vollständige Plattform starten')}
+        <div class="http-body">
+          <div><span class="c-prompt">$</span> git clone ${REPO_URL}.git</div>
+          <div><span class="c-prompt">$</span> cd einfallstor</div>
+          <div><span class="c-prompt">$</span> python server.py --open</div>
+          <div><span class="c-ok">Einfallstor läuft auf http://localhost:1337</span></div>
+        </div>
+      </div>
+      <div class="reveal">
+        <span class="kicker">Unter der Haube</span>
+        <h2 class="title">Diese Ausgabe läuft ganz in deinem Browser</h2>
+        <p class="lead">Hier gibt es keinen Server, deshalb auch keine Konten und keine gemeinsame Rangliste. Die vollständige Plattform bringt ein Backend mit, an dem sich nachlesen lässt, wie eine sichere Anmeldung gebaut ist.</p>
+        ${ticks()}
+        <div class="row-actions">
+          <a class="btn btn-ghost" href="${REPO_URL}" rel="noopener">Quelltext auf GitHub ${icon('arrowRight')}</a>
+          <a class="btn btn-ghost" href="#/sicherheit">Sicherheitskonzept ansehen</a>
+        </div>
+      </div>`;
+  }
+  return `
+      <div class="term reveal">
+        ${termBar('Antwort dieses Servers')}
+        <div class="http-body">
+          <div><span class="c-ok">HTTP/1.0 200 OK</span></div>
+          ${HEADERS.map(([name, value]) => `<div><span class="c-key">${name}:</span> ${esc(value)}</div>`).join('')}
+        </div>
+      </div>
+      <div class="reveal">
+        <span class="kicker">Unter der Haube</span>
+        <h2 class="title">Die Plattform ist selbst ein Lehrstück</h2>
+        <p class="lead">Was der Kurs über sichere Webanwendungen erklärt, setzt diese Seite um. Du kannst es im Quelltext nachlesen und mit den Entwicklerwerkzeugen deines Browsers nachprüfen.</p>
+        ${ticks()}
+        <a class="btn btn-ghost" href="#/sicherheit">Sicherheitskonzept ansehen ${icon('arrowRight')}</a>
+      </div>`;
+}
 
 export const load = () => loadCourse();
 
@@ -44,9 +105,7 @@ export function mount(root, modules) {
           <a class="btn btn-ghost btn-lg" href="#/terminal">${icon('terminal')} Terminal öffnen</a>
         </div>
         <ul class="hero-points">
-          <li>${icon('check')} Keine Vorkenntnisse nötig</li>
-          <li>${icon('check')} Konto ohne E-Mail-Adresse</li>
-          <li>${icon('check')} Läuft auf deinem eigenen Rechner</li>
+          ${POINTS.map((text) => `<li>${icon('check')} ${text}</li>`).join('')}
         </ul>
       </div>
       <div class="hero-visual">
@@ -121,29 +180,7 @@ export function mount(root, modules) {
       </div>
     </section>
 
-    <section class="wrap section split">
-      <div class="term reveal">
-        <div class="term-bar">
-          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-          <span class="term-title">Antwort dieses Servers</span>
-        </div>
-        <div class="http-body">
-          <div><span class="c-ok">HTTP/1.0 200 OK</span></div>
-          ${HEADERS.map(([name, value]) => `<div><span class="c-key">${name}:</span> ${esc(value)}</div>`).join('')}
-        </div>
-      </div>
-      <div class="reveal">
-        <span class="kicker">Unter der Haube</span>
-        <h2 class="title">Die Plattform ist selbst ein Lehrstück</h2>
-        <p class="lead">Was der Kurs über sichere Webanwendungen erklärt, setzt diese Seite um. Du kannst es im Quelltext nachlesen und mit den Entwicklerwerkzeugen deines Browsers nachprüfen.</p>
-        <ul class="ticks">
-          <li>${icon('check')} Backend in Python, nur Standardbibliothek</li>
-          <li>${icon('check')} Passwörter mit scrypt und Salt gespeichert</li>
-          <li>${icon('check')} Sitzungs-Cookie mit HttpOnly und SameSite</li>
-          <li>${icon('check')} Content Security Policy ohne Ausnahmen</li>
-        </ul>
-        <a class="btn btn-ghost" href="#/sicherheit">Sicherheitskonzept ansehen ${icon('arrowRight')}</a>
-      </div>
+    <section class="wrap section split">${hood()}
     </section>
 
     <section class="wrap">
