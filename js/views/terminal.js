@@ -9,11 +9,11 @@ export const load = () => api('/terminal');
 
 function missionHtml(mission, index) {
   return `
-    <div class="mission" data-id="${mission.id}">
+    <div class="mission" data-id="${esc(mission.id)}">
       <button class="mission-head" type="button" aria-expanded="false">
         <span class="mission-nr">${index + 1}</span>
         <span>${esc(mission.title)}</span>
-        <span class="mission-xp">${mission.xp} XP</span>
+        <span class="mission-xp">${esc(mission.xp)} XP</span>
       </button>
       <div class="mission-body">
         <p>${inlineCode(mission.task)}</p>
@@ -25,7 +25,7 @@ function missionHtml(mission, index) {
         <p class="mission-ok" hidden>${icon('check')} Gelöst</p>
         <div class="mission-links">
           <button class="link-btn" type="button" data-hint>Tipp anzeigen</button>
-          ${mission.lesson ? `<a href="#/kurs/${mission.lesson}">Passende Lektion</a>` : ''}
+          ${mission.lesson ? `<a href="#/kurs/${esc(mission.lesson)}">Passende Lektion</a>` : ''}
         </div>
       </div>
     </div>`;
@@ -195,7 +195,7 @@ export function mount(root, data) {
 
   function refresh() {
     data.missions.forEach((mission, index) => {
-      const box = $(`.mission[data-id="${mission.id}"]`, panel);
+      const box = $(`.mission[data-id="${CSS.escape(mission.id)}"]`, panel);
       const isDone = solved.has(mission.id);
       box.classList.toggle('is-done', isDone);
       $('.mission-nr', box).innerHTML = isDone ? icon('check') : String(index + 1);

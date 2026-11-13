@@ -96,8 +96,11 @@ function errorPage(message) {
 }
 
 async function navigate() {
-  if (location.hash && !location.hash.startsWith('#/')) return; // Sprungmarke wie #inhalt, keine Route
-  const path = location.hash.slice(1) || '/';
+  // Eine Sprungmarke wie #inhalt ist keine Route: Die Ansicht bleibt stehen. Nur beim ersten Aufruf
+  // steht noch keine da, dann erscheint die Startseite.
+  const isRoute = !location.hash || location.hash.startsWith('#/');
+  if (!isRoute && !firstRender) return;
+  const path = isRoute ? location.hash.slice(1) || '/' : '/';
   const current = ++ticket;
 
   let route = { view: seiten.notFound, nav: '', title: 'Nicht gefunden' };

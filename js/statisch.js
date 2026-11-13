@@ -5,13 +5,13 @@
 // liegt im Speicher des Browsers (localStorage) und verlässt das Gerät nicht.
 // Konten gibt es in dieser Ausgabe nicht, es gibt genau ein lokales Profil.
 
-import { ApiError } from './lib.js';
+import { ApiError, toast } from './lib.js';
 
 const KEY = 'einfallstor.fortschritt.v1';
 const now = () => Math.floor(Date.now() / 1000);
 
 let dataPromise = null;
-let fallback = null; // Fortschritt für diese Sitzung, falls der Browser localStorage sperrt
+let fallback = null; // Fortschritt für diese Sitzung, falls der Browser das Speichern nicht zulässt
 
 function loadData() {
   dataPromise ||= fetch('daten.json').then((response) => {
@@ -53,8 +53,19 @@ function writeState(state) {
   try {
     localStorage.setItem(KEY, JSON.stringify(state));
   } catch {
+    // Speicher voll oder gesperrt: Der Stand lebt dann nur in dieser Sitzung. Das soll niemand erst beim Neuladen merken.
+    if (!fallback) toast('Dein Browser lässt das Speichern nicht zu. Der Fortschritt hält nur, bis du die Seite neu lädst.', 'warn');
     fallback = state;
   }
+}
+
+/** Behält nur Einträge zu Lektionen und Missionen, die es gibt. Fremde Einträge werden so beim nächsten Speichern verworfen. */
+function prune(state, data) {
+  const missionIds = new Set(data.terminal.missions.map((mission) => mission.id));
+  const keep = (entries, known) => Object.fromEntries(Object.entries(entries).filter(([id]) => known(id)));
+  state.lessons = keep(state.lessons, (id) => Object.hasOwn(data.lessons, id));
+  state.missions = keep(state.missions, (id) => missionIds.has(id));
+  return state;
 }
 
 function clearState() {
@@ -145,7 +156,7 @@ async function checkMission(mission, state, body) {
 /** Beantwortet eine Anfrage wie der Server: GET ohne body, POST mit body. */
 export async function handle(path, body) {
   const data = await loadData();
-  const state = readState();
+  const state = prune(readState(), data);
   let match;
 
   if (path === '/me') return { user: summary(data, state), stats: data.stats, pages: Object.keys(data.pages) };
